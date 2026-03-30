@@ -1,0 +1,38 @@
+# Frontend build
+.pnpm-store/
+.pnpm-debug.log*
+.npm/
+.vite/
+.coverage/
+.eslintcache
+/dist/
+/dist-ssr/
+node_modules/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Rust build
+target
+**/*.rs.bk
+
+# Tauri
+src-tauri/binaries
+src-tauri/target
+src-tauri/.cargo
+src-tauri/.tauri
+
+# IDE / Editor
+/.vscode/
+/.idea/
+
+# Misc
+.DS_Store
+Thumbs.db
+*.local
+*.cache
+.cache/
+logs/
+*.log
