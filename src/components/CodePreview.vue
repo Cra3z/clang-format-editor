@@ -13,8 +13,8 @@ const formatError = ref('')
 let highlighter: Highlighter | null = null
 let formatTimeout: ReturnType<typeof setTimeout> | null = null
 
-// Check if we're inside Tauri
-const isTauri = '__TAURI__' in window
+// Check if we're inside Tauri (v2 always injects __TAURI_INTERNALS__ regardless of withGlobalTauri)
+const isTauri = '__TAURI_INTERNALS__' in window
 
 async function initHighlighter() {
   highlighter = await createHighlighter({
