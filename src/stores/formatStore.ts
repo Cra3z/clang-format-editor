@@ -1,8 +1,25 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import * as yaml from 'js-yaml'
 import type { ClangFormatConfig, BasedOnStyle } from '@/types/clangFormat'
 import { getPresetDefaults } from '@/data/presets'
+import { sampleCode } from '@/data/sampleCode'
+
+const PREVIEW_CODE_STORAGE_KEY = 'preview-code'
+const DIFF_HIGHLIGHT_STORAGE_KEY = 'preview-diff-highlight'
+const PREVIEW_LANG_STORAGE_KEY = 'preview-language'
+
+function readStoredPreviewCode() {
+  return localStorage.getItem(PREVIEW_CODE_STORAGE_KEY) ?? sampleCode
+}
+
+function readStoredDiffHighlight() {
+  return localStorage.getItem(DIFF_HIGHLIGHT_STORAGE_KEY) !== 'false'
+}
+
+function readStoredPreviewLang() {
+  return localStorage.getItem(PREVIEW_LANG_STORAGE_KEY) ?? 'cpp'
+}
 
 export const useFormatStore = defineStore('format', () => {
   const config = ref<ClangFormatConfig>({
@@ -11,6 +28,21 @@ export const useFormatStore = defineStore('format', () => {
   })
 
   const activePreset = ref<BasedOnStyle>('LLVM')
+  const previewCode = ref(readStoredPreviewCode())
+  const diffHighlightEnabled = ref(readStoredDiffHighlight())
+  const previewLanguage = ref(readStoredPreviewLang())
+
+  watch(previewCode, (value) => {
+    localStorage.setItem(PREVIEW_CODE_STORAGE_KEY, value)
+  })
+
+  watch(diffHighlightEnabled, (value) => {
+    localStorage.setItem(DIFF_HIGHLIGHT_STORAGE_KEY, String(value))
+  })
+
+  watch(previewLanguage, (value) => {
+    localStorage.setItem(PREVIEW_LANG_STORAGE_KEY, value)
+  })
 
   function setPreset(preset: BasedOnStyle) {
     activePreset.value = preset
@@ -75,14 +107,22 @@ export const useFormatStore = defineStore('format', () => {
     setPreset(activePreset.value)
   }
 
+  function resetPreviewCode() {
+    previewCode.value = sampleCode
+  }
+
   return {
     config,
     activePreset,
+    previewCode,
+    diffHighlightEnabled,
+    previewLanguage,
     setPreset,
     setOption,
     getOption,
     yamlOutput,
     importYaml,
     resetToPreset,
+    resetPreviewCode,
   }
 })

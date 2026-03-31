@@ -2,12 +2,16 @@ use std::process::Command;
 
 /// 调用系统 clang-format 格式化代码
 #[tauri::command]
-pub fn format_code(code: String, style: String) -> Result<String, String> {
+pub fn format_code(code: String, style: String, assume_filename: Option<String>) -> Result<String, String> {
     use std::io::Write;
+
+    let assume_filename = assume_filename
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| "input.cpp".to_string());
 
     let mut child = Command::new("clang-format")
         .arg(format!("--style={}", style))
-        .arg("--assume-filename=input.cpp")
+        .arg(format!("--assume-filename={}", assume_filename))
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
