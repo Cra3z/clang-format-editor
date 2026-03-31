@@ -316,6 +316,7 @@ dependencies = [
 name = "clang-format-editor"
 version = "0.1.0"
 dependencies = [
+ "dunce",
  "serde",
  "serde_json",
  "tauri",

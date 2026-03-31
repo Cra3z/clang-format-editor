@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
+import { useSettingsStore } from './stores/settingsStore'
 import SideNav from './components/SideNav.vue'
 import Toolbar from './components/Toolbar.vue'
 import CodePreview from './components/CodePreview.vue'
+
+const settingsStore = useSettingsStore()
 
 const OUTER_SPLITTER_STORAGE_KEY = 'layout-option-panel-percent'
 
@@ -45,6 +48,10 @@ function onSplitterUp() {
 
 watch(optionPanelPercent, (value) => {
   localStorage.setItem(OUTER_SPLITTER_STORAGE_KEY, String(value))
+})
+
+onMounted(() => {
+  void settingsStore.refreshDetectedClangFormat()
 })
 </script>
 

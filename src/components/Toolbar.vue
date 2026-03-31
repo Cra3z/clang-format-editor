@@ -1,26 +1,19 @@
 <script setup lang="ts">
 import { useFormatStore } from '@/stores/formatStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { presetNames } from '@/data/presets'
 import type { BasedOnStyle } from '@/types/clangFormat'
-import { ref, onMounted } from 'vue'
+import { computed, ref } from 'vue'
+import SettingsModal from './SettingsModal.vue'
 
 const store = useFormatStore()
+const settingsStore = useSettingsStore()
 const showExport = ref(false)
-const isDark = ref(true)
-
-onMounted(() => {
-  const saved = localStorage.getItem('theme')
-  if (saved === 'light') {
-    isDark.value = false
-    document.documentElement.setAttribute('data-theme', 'light')
-  }
-})
+const showSettings = ref(false)
+const isDark = computed(() => settingsStore.theme === 'dark')
 
 function toggleTheme() {
-  isDark.value = !isDark.value
-  const theme = isDark.value ? 'dark' : 'light'
-  document.documentElement.setAttribute('data-theme', theme)
-  localStorage.setItem('theme', theme)
+  settingsStore.theme = settingsStore.theme === 'dark' ? 'light' : 'dark'
 }
 
 function handlePresetChange(e: Event) {
@@ -86,6 +79,7 @@ function resetConfig() {
       <button @click="toggleTheme" class="theme-btn" :title="isDark ? '切换到亮色主题' : '切换到暗色主题'">
         {{ isDark ? '☀️' : '🌙' }}
       </button>
+      <button @click="showSettings = true" title="打开设置">⚙️ 设置</button>
       <button @click="handleImport" title="导入 .clang-format 文件">📂 导入</button>
       <button @click="exportConfig" title="导出配置" class="primary">💾 导出</button>
       <button @click="resetConfig" title="重置为预设默认值">🔄 重置</button>
@@ -105,6 +99,8 @@ function resetConfig() {
         </div>
       </div>
     </div>
+
+    <SettingsModal :open="showSettings" @close="showSettings = false" />
   </header>
 </template>
 

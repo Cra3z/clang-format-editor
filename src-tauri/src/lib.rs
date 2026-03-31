@@ -9,6 +9,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::format_code,
             commands::get_clang_format_version,
+            commands::inspect_clang_format,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

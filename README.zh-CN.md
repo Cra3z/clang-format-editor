@@ -17,6 +17,8 @@
 - **导入** — 直接加载已有的 `.clang-format` 文件
 - **语法高亮** — 使用 [Shiki](https://shiki.style/) 高亮显示代码预览和 YAML 输出
 - **亮色 / 暗色主题** 切换（持久化保存）
+- **设置对话框** — 可配置主题、自定义 `clang-format` 可执行文件路径，并为后续区域设置预留入口
+- **可执行文件检测** — 可检测当前配置的 `clang-format` 版本，并自动扫描常见安装路径
 
 ## 选项分类
 
@@ -58,7 +60,7 @@ pnpm run tauri dev
 ```
 
 Vite 会在 `http://localhost:1420` 启动，Tauri 自动打开桌面窗口。  
-实时预览功能需要将 `clang-format` 加入系统 `PATH`。
+实时预览默认使用系统 `PATH` 中的 `clang-format`，也可以在设置对话框里指定自定义可执行文件路径。
 
 ## 构建
 

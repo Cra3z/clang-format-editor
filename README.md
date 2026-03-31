@@ -17,6 +17,8 @@ English | [中文](README.zh-CN.md)
 - **Import** — load an existing `.clang-format` file directly
 - **Syntax-highlighted** code and YAML preview powered by [Shiki](https://shiki.style/)
 - **Light / Dark theme** toggle (persisted across sessions)
+- **Settings dialog** — configure theme, custom `clang-format` executable path, and reserve locale preferences for future use
+- **Executable detection** — check the configured `clang-format` version and auto-detect common install locations
 
 ## Option Categories
 
@@ -58,7 +60,7 @@ pnpm run tauri dev
 ```
 
 Vite starts on `http://localhost:1420` and Tauri opens the desktop window automatically.  
-The live preview requires `clang-format` to be available in your `PATH`.
+The live preview uses `clang-format` from your `PATH` by default, but you can also open the Settings dialog and point the app to a custom executable path.
 
 ## Building
 

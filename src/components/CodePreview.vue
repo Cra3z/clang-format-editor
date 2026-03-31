@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed, onBeforeUnmount } from 'vue'
 import { useFormatStore } from '@/stores/formatStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import type { Highlighter } from 'shiki'
 import { diffLines } from 'diff'
 import RichCodeEditor from './RichCodeEditor.vue'
@@ -8,6 +9,7 @@ import { sampleCode } from '@/data/sampleCode'
 import { getCodeHighlighter, getCodeThemeName, normalizeCodeLanguage, warmupCodeHighlighter } from '@/composables/useCodeHighlighter'
 
 const store = useFormatStore()
+const settingsStore = useSettingsStore()
 const activeTab = ref<'preview' | 'yaml'>('preview')
 const formattedCode = ref(store.previewCode)
 const formatError = ref('')
@@ -174,10 +176,12 @@ async function formatWithClangFormat() {
     const { invoke } = await import('@tauri-apps/api/core')
     const yamlConfig = store.yamlOutput
     const style = `{${yamlConfig.replace(/\n/g, ', ')}}`
+    const executablePath = settingsStore.effectiveClangFormatExecutablePath.trim()
     const result = await invoke<string>('format_code', {
       code: store.previewCode,
       style,
       assumeFilename: getAssumeFilename(),
+      executablePath: executablePath || undefined,
     })
     formattedCode.value = result
     formatError.value = ''
@@ -208,6 +212,15 @@ function requestCloseEditModal() {
   }
 
   discardEditDraft()
+}
+
+function handleEditModalEscape(event: KeyboardEvent) {
+  if (event.key !== 'Escape' || !isEditModalOpen.value) {
+    return
+  }
+
+  event.preventDefault()
+  requestCloseEditModal()
 }
 
 function applyEdit() {
@@ -322,11 +335,28 @@ watch(() => store.previewLanguage, () => {
   scheduleFormat()
 })
 
+watch(() => settingsStore.clangFormatExecutablePath, () => {
+  scheduleFormat()
+})
+
+watch(() => settingsStore.detectedClangFormatExecutablePath, () => {
+  scheduleFormat()
+})
+
+watch(isEditModalOpen, (open) => {
+  window.removeEventListener('keydown', handleEditModalEscape)
+
+  if (open) {
+    window.addEventListener('keydown', handleEditModalEscape)
+  }
+})
+
 const themeObserver = new MutationObserver(() => updateHighlight())
 onMounted(() => {
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 })
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleEditModalEscape)
   themeObserver.disconnect()
 })
 
@@ -455,7 +485,6 @@ function escapeHtml(str: string): string {
     <div
       v-show="isEditModalOpen"
       class="edit-modal-overlay"
-      @click.self="requestCloseEditModal"
     >
       <div class="edit-modal" @keydown.ctrl.enter.prevent="applyEdit">
         <div class="edit-modal-header">
