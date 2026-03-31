@@ -100,7 +100,7 @@ function resetConfig() {
         </div>
         <pre class="export-content mono">{{ store.yamlOutput }}</pre>
         <div class="export-actions">
-          <button @click="copyToClipboard">📋 复制到剪贴板</button>
+          <button class="copy-button" @click="copyToClipboard">📋 复制到剪贴板</button>
           <button class="primary" @click="downloadFile">💾 下载文件</button>
         </div>
       </div>
@@ -204,6 +204,16 @@ function resetConfig() {
   background: transparent;
   font-size: 16px;
   padding: 4px 8px;
+}
+
+.copy-button {
+  transition: background-color var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent) 18%, var(--bg-surface));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+    filter: brightness(1.06);
+  }
 }
 
 .export-content {

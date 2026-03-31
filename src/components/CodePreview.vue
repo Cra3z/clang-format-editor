@@ -1,18 +1,25 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed, onBeforeUnmount } from 'vue'
 import { useFormatStore } from '@/stores/formatStore'
-import { createHighlighter, type Highlighter } from 'shiki'
+import type { Highlighter } from 'shiki'
 import { diffLines } from 'diff'
+import RichCodeEditor from './RichCodeEditor.vue'
+import { sampleCode } from '@/data/sampleCode'
+import { getCodeHighlighter, getCodeThemeName, normalizeCodeLanguage, warmupCodeHighlighter } from '@/composables/useCodeHighlighter'
 
 const store = useFormatStore()
-const activeTab = ref<'preview' | 'yaml' | 'edit'>('preview')
-const highlightedYaml = ref('')
+const activeTab = ref<'preview' | 'yaml'>('preview')
 const formattedCode = ref(store.previewCode)
 const formatError = ref('')
+const yamlText = ref(store.yamlOutput)
+const yamlError = ref('')
+const isEditModalOpen = ref(false)
 let highlighter: Highlighter | null = null
 let formatTimeout: ReturnType<typeof setTimeout> | null = null
 
 const isTauri = '__TAURI_INTERNALS__' in window
+
+const INNER_SPLITTER_STORAGE_KEY = 'preview-diff-splitter-percent'
 
 const editCode = ref(store.previewCode)
 
@@ -31,23 +38,28 @@ function getAssumeFilename() {
   return match ? `input${match.ext}` : 'input.cpp'
 }
 
+function readStoredLeftPanePercent() {
+  const stored = Number(localStorage.getItem(INNER_SPLITTER_STORAGE_KEY))
+  if (Number.isFinite(stored)) {
+    return Math.min(80, Math.max(20, stored))
+  }
+
+  return 50
+}
+
 // ---- Highlighter ----
 
 async function initHighlighter() {
-  highlighter = await createHighlighter({
-    themes: ['vitesse-dark', 'vitesse-light'],
-    langs: ['cpp', 'yaml', 'csharp', 'java', 'javascript', 'objective-c', 'proto', 'verilog'],
-  })
+  highlighter = await getCodeHighlighter()
   updateHighlight()
 }
 
 function getShikiTheme() {
-  return document.documentElement.getAttribute('data-theme') === 'light'
-    ? 'vitesse-light' : 'vitesse-dark'
+  return getCodeThemeName()
 }
 
 function getShikiLang() {
-  return store.previewLanguage || 'cpp'
+  return normalizeCodeLanguage(store.previewLanguage || 'cpp')
 }
 
 // ---- Side-by-side diff ----
@@ -146,11 +158,6 @@ function highlightLine(line: string, lang: string): string {
 const diffPairs = ref<DiffPair[]>([])
 
 function updateHighlight() {
-  if (highlighter) {
-    highlightedYaml.value = highlighter.codeToHtml(store.yamlOutput, { lang: 'yaml', theme: getShikiTheme() })
-  } else {
-    highlightedYaml.value = `<pre><code>${escapeHtml(store.yamlOutput)}</code></pre>`
-  }
   diffPairs.value = buildSideBySideLines(store.previewCode, formattedCode.value)
 }
 
@@ -183,15 +190,50 @@ async function formatWithClangFormat() {
 
 // ---- Editing ----
 
+function openEditModal() {
+  editCode.value = store.previewCode
+  isEditModalOpen.value = true
+}
+
+const hasEditDraftChanges = computed(() => editCode.value !== store.previewCode)
+
+function discardEditDraft() {
+  editCode.value = store.previewCode
+  isEditModalOpen.value = false
+}
+
+function requestCloseEditModal() {
+  if (hasEditDraftChanges.value && !window.confirm('当前代码有未保存改动，确认放弃吗？')) {
+    return
+  }
+
+  discardEditDraft()
+}
+
 function applyEdit() {
   store.previewCode = editCode.value
-  activeTab.value = 'preview'
+  isEditModalOpen.value = false
   scheduleFormat()
 }
 
-function resetEdit() {
-  store.resetPreviewCode()
-  editCode.value = store.previewCode
+function resetEditDraft() {
+  editCode.value = sampleCode
+}
+
+function applyYamlEdit() {
+  const ok = store.importYaml(yamlText.value)
+  if (!ok) {
+    yamlError.value = 'YAML 解析失败，请检查缩进和字段格式。'
+    return
+  }
+
+  yamlText.value = store.yamlOutput
+  yamlError.value = ''
+  activeTab.value = 'preview'
+}
+
+async function copyYamlText() {
+  await navigator.clipboard.writeText(yamlText.value)
 }
 
 function scheduleFormat() {
@@ -203,7 +245,7 @@ function scheduleFormat() {
 
 // ---- Splitter drag ----
 
-const leftPanePercent = ref(50)
+const leftPanePercent = ref(readStoredLeftPanePercent())
 const isDragging = ref(false)
 const splitContainer = ref<HTMLElement | null>(null)
 
@@ -251,15 +293,19 @@ function onRightScroll() {
 // ---- Lifecycle & watchers ----
 
 onMounted(() => {
+  warmupCodeHighlighter()
   initHighlighter()
   formatWithClangFormat()
 })
 
+watch(leftPanePercent, (value) => {
+  localStorage.setItem(INNER_SPLITTER_STORAGE_KEY, String(value))
+})
+
 watch(() => store.yamlOutput, () => {
+  yamlText.value = store.yamlOutput
+  yamlError.value = ''
   scheduleFormat()
-  if (highlighter) {
-    highlightedYaml.value = highlighter.codeToHtml(store.yamlOutput, { lang: 'yaml', theme: getShikiTheme() })
-  }
 })
 
 watch(() => store.previewCode, (val) => {
@@ -284,8 +330,6 @@ onBeforeUnmount(() => {
   themeObserver.disconnect()
 })
 
-const showDiffToggle = computed(() => activeTab.value === 'preview')
-
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -297,30 +341,19 @@ function escapeHtml(str: string): string {
 <template>
   <div class="code-preview">
     <div class="preview-tabs">
-      <button
-        :class="{ active: activeTab === 'preview' }"
-        @click="activeTab = 'preview'"
-      >
-        代码预览
-      </button>
-      <button
-        :class="{ active: activeTab === 'yaml' }"
-        @click="activeTab = 'yaml'"
-      >
-        .clang-format
-      </button>
-      <button
-        :class="{ active: activeTab === 'edit' }"
-        @click="activeTab = 'edit'"
-      >
-        编辑代码
-      </button>
-
-      <div class="tabs-right" v-if="showDiffToggle">
-        <label class="diff-toggle">
-          <input type="checkbox" v-model="store.diffHighlightEnabled" />
-          <span>显示差异</span>
-        </label>
+      <div class="tabs-left">
+        <button
+          :class="{ active: activeTab === 'preview' }"
+          @click="activeTab = 'preview'"
+        >
+          代码预览
+        </button>
+        <button
+          :class="{ active: activeTab === 'yaml' }"
+          @click="activeTab = 'yaml'"
+        >
+          .clang-format
+        </button>
       </div>
     </div>
 
@@ -337,7 +370,12 @@ function escapeHtml(str: string): string {
         >
           <!-- Left pane -->
           <div class="split-pane" :style="{ width: leftPanePercent + '%' }">
-            <div class="pane-header">原始代码</div>
+            <div class="pane-header">
+              <span class="pane-header-title">原始代码</span>
+              <div class="pane-header-actions">
+                <button class="pane-header-button" @click="openEditModal">编辑</button>
+              </div>
+            </div>
             <div ref="leftScrollEl" class="pane-scroll mono" @scroll="onLeftScroll">
               <div
                 v-for="(pair, idx) in diffPairs"
@@ -365,7 +403,15 @@ function escapeHtml(str: string): string {
 
           <!-- Right pane -->
           <div class="split-pane" :style="{ width: (100 - leftPanePercent) + '%' }">
-            <div class="pane-header">格式化后</div>
+            <div class="pane-header">
+              <span class="pane-header-title">格式化后</span>
+              <div class="pane-header-actions">
+                <label class="diff-toggle diff-toggle-inline">
+                  <input type="checkbox" v-model="store.diffHighlightEnabled" />
+                  <span>显示差异</span>
+                </label>
+              </div>
+            </div>
             <div ref="rightScrollEl" class="pane-scroll mono" @scroll="onRightScroll">
               <div
                 v-for="(pair, idx) in diffPairs"
@@ -385,13 +431,44 @@ function escapeHtml(str: string): string {
       </template>
 
       <!-- YAML tab -->
-      <div v-else-if="activeTab === 'yaml'" class="code-block" v-html="highlightedYaml"></div>
+      <div
+        v-else-if="activeTab === 'yaml'"
+        class="yaml-panel"
+        @keydown.ctrl.enter.prevent="applyYamlEdit"
+      >
+        <div class="yaml-toolbar">
+          <span class="yaml-toolbar-title">.clang-format</span>
+          <div class="yaml-toolbar-spacer"></div>
+          <button class="copy-button" @click="copyYamlText">复制</button>
+          <button class="primary" @click="applyYamlEdit">应用</button>
+        </div>
+        <div v-if="yamlError" class="yaml-error">{{ yamlError }}</div>
+        <RichCodeEditor
+          v-model="yamlText"
+          class="yaml-editor"
+          lang="yaml"
+          :tab-size="2"
+        />
+      </div>
+    </div>
 
-      <!-- Edit tab -->
-      <div v-else class="edit-panel">
-        <div class="edit-toolbar">
-          <button class="primary" @click="applyEdit">✓ 应用</button>
-          <button @click="resetEdit">↺ 还原默认</button>
+    <div
+      v-show="isEditModalOpen"
+      class="edit-modal-overlay"
+      @click.self="requestCloseEditModal"
+    >
+      <div class="edit-modal" @keydown.ctrl.enter.prevent="applyEdit">
+        <div class="edit-modal-header">
+          <div>
+            <div class="edit-modal-title">编辑原始代码</div>
+            <div class="edit-modal-subtitle">修改左侧原始代码，应用后会重新格式化并更新差异。</div>
+          </div>
+          <button class="edit-modal-close" @click="requestCloseEditModal">关闭</button>
+        </div>
+
+        <div class="edit-modal-toolbar">
+          <button class="primary" @click="applyEdit">应用</button>
+          <button @click="resetEditDraft">还原默认示例</button>
           <div class="edit-toolbar-spacer"></div>
           <label class="lang-selector">
             <span>语言:</span>
@@ -402,12 +479,15 @@ function escapeHtml(str: string): string {
             </select>
           </label>
         </div>
-        <textarea
-          v-model="editCode"
-          class="edit-textarea mono"
-          spellcheck="false"
-          @keydown.ctrl.enter.prevent="applyEdit"
-        ></textarea>
+
+        <div class="edit-modal-body">
+          <RichCodeEditor
+            v-model="editCode"
+            class="edit-code-editor"
+            :lang="store.previewLanguage"
+            :tab-size="4"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -435,6 +515,8 @@ function escapeHtml(str: string): string {
     border-radius: 0;
     border-bottom: 2px solid transparent;
     transition: all var(--transition-fast);
+    flex-shrink: 0;
+    white-space: nowrap;
 
     &:hover {
       color: var(--text-primary);
@@ -447,10 +529,12 @@ function escapeHtml(str: string): string {
     }
   }
 
-  .tabs-right {
-    margin-left: auto;
-    padding-right: 12px;
-  }
+}
+
+.tabs-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .diff-toggle {
@@ -466,6 +550,11 @@ function escapeHtml(str: string): string {
     cursor: pointer;
     accent-color: var(--accent);
   }
+}
+
+.diff-toggle-inline {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .preview-body {
@@ -497,13 +586,36 @@ function escapeHtml(str: string): string {
   position: sticky;
   top: 0;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 4px 12px;
+  min-height: 36px;
   font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--text-muted);
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+}
+
+.pane-header-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pane-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.pane-header-button {
+  padding: 4px 10px;
+  font-size: var(--font-size-xs);
 }
 
 .pane-scroll {
@@ -608,29 +720,53 @@ function escapeHtml(str: string): string {
   }
 }
 
-/* ---- YAML code block ---- */
+/* ---- YAML panel ---- */
 
-.code-block {
-  padding: 0;
-  margin: 0;
-  font-size: var(--font-size-sm);
-  line-height: 1.7;
-  color: var(--text-primary);
+.yaml-panel {
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  overflow: auto;
+}
 
-  :deep(pre) {
-    padding: 16px;
-    margin: 0;
-    background: transparent !important;
-    font-family: var(--font-mono);
-    font-size: var(--font-size-sm);
-    line-height: 1.7;
-  }
+.yaml-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
 
-  :deep(code) {
-    font-family: var(--font-mono);
+.yaml-toolbar-spacer {
+  flex: 1;
+}
+
+.yaml-toolbar-title {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.copy-button {
+  transition: background-color var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent) 18%, var(--bg-surface));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+    filter: brightness(1.06);
   }
+}
+
+.yaml-error {
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+  color: var(--error);
+  border-bottom: 1px solid color-mix(in srgb, var(--error) 25%, var(--border-color));
+  font-size: var(--font-size-xs);
+}
+
+.yaml-editor {
+  flex: 1;
+  min-height: 0;
 }
 
 .format-error {
@@ -647,21 +783,71 @@ function escapeHtml(str: string): string {
   }
 }
 
-/* ---- Edit panel ---- */
+/* ---- Edit modal ---- */
 
-.edit-panel {
+.edit-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
   display: flex;
-  flex-direction: column;
-  height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 0.52);
+  backdrop-filter: blur(6px);
 }
 
-.edit-toolbar {
+.edit-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(980px, calc(100vw - 48px));
+  height: min(760px, calc(100vh - 48px));
+  min-height: 420px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.4);
+  overflow: hidden;
+}
+
+.edit-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.edit-modal-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.edit-modal-subtitle {
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.edit-modal-close {
+  flex-shrink: 0;
+}
+
+.edit-modal-toolbar {
   display: flex;
   gap: 8px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-secondary);
   align-items: center;
+}
+
+.edit-modal-body {
+  flex: 1;
+  min-height: 0;
 }
 
 .edit-toolbar-spacer {
@@ -681,21 +867,9 @@ function escapeHtml(str: string): string {
   }
 }
 
-.edit-textarea {
+.edit-code-editor {
   flex: 1;
-  resize: none;
-  border: none;
-  border-radius: 0;
-  padding: 16px;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  font-size: var(--font-size-sm);
-  line-height: 1.7;
-  tab-size: 4;
-  outline: none;
-
-  &:focus {
-    border-color: transparent;
-  }
+  height: 100%;
+  min-height: 0;
 }
 </style>

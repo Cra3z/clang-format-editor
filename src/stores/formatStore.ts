@@ -97,8 +97,10 @@ export const useFormatStore = defineStore('format', () => {
         }
         config.value = { ...getPresetDefaults(activePreset.value), ...parsed }
       }
+      return true
     } catch (e) {
       console.error('Failed to parse YAML:', e)
+      return false
     }
   }
 
