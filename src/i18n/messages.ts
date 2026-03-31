@@ -36,6 +36,7 @@ export const messages = {
       resetToPreset: 'Reset to preset defaults',
       exportTitle: 'Export .clang-format',
       copyToClipboard: 'Copy to clipboard',
+      importError: 'Import failed: {message}',
     },
     sidenav: {
       header: 'Option Categories',
@@ -323,6 +324,7 @@ export const messages = {
       resetToPreset: '重置为预设默认值',
       exportTitle: '导出 .clang-format',
       copyToClipboard: '复制到剪贴板',
+      importError: '导入失败：{message}',
     },
     sidenav: {
       header: '选项分类',

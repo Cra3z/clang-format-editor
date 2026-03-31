@@ -22,7 +22,7 @@ function optionDescription(key: string) {
         :description="optionDescription('BasedOnStyle')"
         type="enum"
         :modelValue="store.config.BasedOnStyle"
-        :enumValues="['LLVM', 'Google', 'Chromium', 'Mozilla', 'WebKit', 'Microsoft', 'GNU']"
+        :enumValues="['LLVM', 'Google', 'Chromium', 'Mozilla', 'WebKit', 'Microsoft', 'GNU', 'InheritParentConfig']"
         @update:modelValue="store.setOption('BasedOnStyle', $event as any)"
       />
       <OptionControl

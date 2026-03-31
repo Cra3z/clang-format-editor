@@ -4,6 +4,7 @@ import * as yaml from 'js-yaml'
 import type { ClangFormatConfig, BasedOnStyle } from '@/types/clangFormat'
 import { getPresetDefaults } from '@/data/presets'
 import { sampleCode } from '@/data/sampleCode'
+import { validateClangFormatYaml } from '@/lib/clangFormatValidation'
 
 const PREVIEW_CODE_STORAGE_KEY = 'preview-code'
 const DIFF_HIGHLIGHT_STORAGE_KEY = 'preview-diff-highlight'
@@ -21,11 +22,35 @@ function readStoredPreviewLang() {
   return localStorage.getItem(PREVIEW_LANG_STORAGE_KEY) ?? 'cpp'
 }
 
+function normalizeBasedOnStyle(style: unknown): BasedOnStyle | null {
+  if (typeof style !== 'string') {
+    return null
+  }
+
+  switch (style.toLowerCase()) {
+    case 'chromium':
+      return 'Chromium'
+    case 'google':
+      return 'Google'
+    case 'gnu':
+      return 'GNU'
+    case 'inheritparentconfig':
+      return 'InheritParentConfig'
+    case 'llvm':
+      return 'LLVM'
+    case 'microsoft':
+      return 'Microsoft'
+    case 'mozilla':
+      return 'Mozilla'
+    case 'webkit':
+      return 'WebKit'
+    default:
+      return null
+  }
+}
+
 export const useFormatStore = defineStore('format', () => {
-  const config = ref<ClangFormatConfig>({
-    BasedOnStyle: 'LLVM',
-    Language: 'Cpp',
-  })
+  const config = ref<ClangFormatConfig>(getPresetDefaults('LLVM'))
 
   const activePreset = ref<BasedOnStyle>('LLVM')
   const previewCode = ref(readStoredPreviewCode())
@@ -87,16 +112,53 @@ export const useFormatStore = defineStore('format', () => {
     }).replace(/^---\n/, '')
   })
 
+  /**
+   * 与 yamlOutput 逻辑相同，但返回纯对象而非 YAML 字符串。
+   * 只包含与当前预设不同的选项 + BasedOnStyle，
+   * 用于构造传给 clang-format --style= 的参数，避免将新版选项传给旧版可执行文件。
+   */
+  const configDiff = computed<Record<string, unknown>>(() => {
+    const output: Record<string, unknown> = {}
+    const defaults = getPresetDefaults(activePreset.value)
+
+    if (config.value.BasedOnStyle) {
+      output.BasedOnStyle = config.value.BasedOnStyle
+    }
+
+    for (const [key, value] of Object.entries(config.value)) {
+      if (key === 'BasedOnStyle') continue
+      if (value === undefined || value === null) continue
+
+      const defaultVal = defaults[key as keyof ClangFormatConfig]
+      if (JSON.stringify(value) !== JSON.stringify(defaultVal)) {
+        output[key] = value
+      }
+    }
+
+    return output
+  })
+
   /** 从 YAML 导入配置 */
+  function applyImportedConfig(parsed: ClangFormatConfig) {
+    const normalizedBasedOnStyle = normalizeBasedOnStyle(parsed.BasedOnStyle)
+    const nextPreset = normalizedBasedOnStyle ?? activePreset.value
+    const normalizedConfig = normalizedBasedOnStyle
+      ? { ...parsed, BasedOnStyle: normalizedBasedOnStyle }
+      : parsed
+
+    activePreset.value = nextPreset
+    config.value = { ...getPresetDefaults(nextPreset), ...normalizedConfig }
+  }
+
   function importYaml(yamlStr: string) {
     try {
-      const parsed = yaml.load(yamlStr) as ClangFormatConfig
-      if (parsed && typeof parsed === 'object') {
-        if (parsed.BasedOnStyle) {
-          activePreset.value = parsed.BasedOnStyle
-        }
-        config.value = { ...getPresetDefaults(activePreset.value), ...parsed }
+      const validation = validateClangFormatYaml(yamlStr)
+      if (!validation.valid || !validation.config) {
+        return false
       }
+
+      const parsed = validation.config as ClangFormatConfig
+      applyImportedConfig(parsed)
       return true
     } catch (e) {
       console.error('Failed to parse YAML:', e)
@@ -123,7 +185,9 @@ export const useFormatStore = defineStore('format', () => {
     setOption,
     getOption,
     yamlOutput,
+    configDiff,
     importYaml,
+    applyImportedConfig,
     resetToPreset,
     resetPreviewCode,
   }

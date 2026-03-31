@@ -13,6 +13,19 @@ const { t } = useI18n()
 const showExport = ref(false)
 const showSettings = ref(false)
 const isDark = computed(() => settingsStore.theme === 'dark')
+const importErrorMsg = ref('')
+let importErrorTimer: ReturnType<typeof setTimeout> | null = null
+
+function showImportError(message: string) {
+  importErrorMsg.value = message
+  if (importErrorTimer !== null) {
+    clearTimeout(importErrorTimer)
+  }
+  importErrorTimer = setTimeout(() => {
+    importErrorMsg.value = ''
+    importErrorTimer = null
+  }, 5000)
+}
 
 function toggleTheme() {
   settingsStore.theme = settingsStore.theme === 'dark' ? 'light' : 'dark'
@@ -47,10 +60,16 @@ function handleImport() {
   input.accept = '.clang-format,.yaml,.yml'
   input.onchange = async () => {
     const file = input.files?.[0]
-    if (file) {
-      const text = await file.text()
-      store.importYaml(text)
+    if (!file) return
+    const text = await file.text()
+    const { validateClangFormatYaml } = await import('@/lib/clangFormatValidation')
+    const validation = validateClangFormatYaml(text)
+    if (!validation.valid || !validation.config) {
+      const firstMsg = validation.diagnostics[0]?.message ?? 'Invalid .clang-format file'
+      showImportError(t('toolbar.importError', { message: firstMsg }))
+      return
     }
+    store.applyImportedConfig(validation.config as any)
   }
   input.click()
 }
@@ -86,6 +105,12 @@ function resetConfig() {
       <button @click="exportConfig" :title="t('toolbar.exportConfig')" class="primary">💾 {{ t('common.actions.export') }}</button>
       <button @click="resetConfig" :title="t('toolbar.resetToPreset')">🔄 {{ t('common.actions.reset') }}</button>
     </div>
+
+    <Transition name="toast">
+      <div v-if="importErrorMsg" class="import-toast">
+        {{ importErrorMsg }}
+      </div>
+    </Transition>
 
     <!-- Export overlay -->
     <div v-if="showExport" class="export-overlay" @click.self="showExport = false">
@@ -163,6 +188,36 @@ function resetConfig() {
   &:hover {
     background: var(--bg-hover);
   }
+}
+
+.import-toast {
+  position: fixed;
+  top: calc(var(--toolbar-height) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--error) 18%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, var(--error) 50%, transparent);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  font-size: var(--font-size-sm);
+  max-width: 520px;
+  text-align: center;
+  z-index: 200;
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-6px);
 }
 
 .export-overlay {

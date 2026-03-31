@@ -6,8 +6,11 @@ import type { Highlighter } from 'shiki'
 import { diffLines } from 'diff'
 import { useI18n } from 'vue-i18n'
 import RichCodeEditor from './RichCodeEditor.vue'
+import ClangFormatYamlEditor from './ClangFormatYamlEditor.vue'
 import { sampleCode } from '@/data/sampleCode'
 import { getCodeHighlighter, getCodeThemeName, normalizeCodeLanguage, warmupCodeHighlighter } from '@/composables/useCodeHighlighter'
+import type { ClangFormatConfig } from '@/types/clangFormat'
+import { buildClangFormatStyle, validateClangFormatYaml } from '@/lib/clangFormatValidation'
 
 const store = useFormatStore()
 const settingsStore = useSettingsStore()
@@ -168,16 +171,29 @@ function updateHighlight() {
 // ---- Format via Tauri ----
 
 async function formatWithClangFormat() {
+  return runClangFormatWithConfig(store.configDiff, true)
+}
+
+async function runClangFormatWithConfig(styleConfig: Record<string, unknown>, updatePreviewState = false) {
   if (!isTauri) {
-    formattedCode.value = store.previewCode
-    formatError.value = ''
-    updateHighlight()
-    return
+    const result = {
+      error: '',
+      formatted: store.previewCode,
+      ok: true,
+    }
+
+    if (updatePreviewState) {
+      formattedCode.value = result.formatted
+      formatError.value = ''
+      updateHighlight()
+    }
+
+    return result
   }
+
   try {
     const { invoke } = await import('@tauri-apps/api/core')
-    const yamlConfig = store.yamlOutput
-    const style = `{${yamlConfig.replace(/\n/g, ', ')}}`
+    const style = buildClangFormatStyle(styleConfig)
     const executablePath = settingsStore.effectiveClangFormatExecutablePath.trim()
     const result = await invoke<string>('format_code', {
       code: store.previewCode,
@@ -185,13 +201,33 @@ async function formatWithClangFormat() {
       assumeFilename: getAssumeFilename(),
       executablePath: executablePath || undefined,
     })
-    formattedCode.value = result
-    formatError.value = ''
+
+    if (updatePreviewState) {
+      formattedCode.value = result
+      formatError.value = ''
+      updateHighlight()
+    }
+
+    return {
+      error: '',
+      formatted: result,
+      ok: true,
+    }
   } catch (e: unknown) {
-    formatError.value = String(e)
-    formattedCode.value = store.previewCode
+    const error = String(e)
+
+    if (updatePreviewState) {
+      formatError.value = error
+      formattedCode.value = store.previewCode
+      updateHighlight()
+    }
+
+    return {
+      error,
+      formatted: store.previewCode,
+      ok: false,
+    }
   }
-  updateHighlight()
 }
 
 // ---- Editing ----
@@ -235,15 +271,26 @@ function resetEditDraft() {
   editCode.value = sampleCode
 }
 
-function applyYamlEdit() {
-  const ok = store.importYaml(yamlText.value)
-  if (!ok) {
-    yamlError.value = t('preview.yamlParseError')
+async function applyYamlEdit() {
+  const validation = validateClangFormatYaml(yamlText.value)
+  if (!validation.valid || !validation.config) {
+    yamlError.value = validation.diagnostics[0]?.message ?? t('preview.yamlParseError')
     return
   }
 
+  const formatResult = await runClangFormatWithConfig(validation.config, false)
+  if (!formatResult.ok) {
+    yamlError.value = formatResult.error
+    return
+  }
+
+  store.applyImportedConfig(validation.config as ClangFormatConfig)
+
   yamlText.value = store.yamlOutput
   yamlError.value = ''
+  formattedCode.value = formatResult.formatted
+  formatError.value = ''
+  updateHighlight()
   activeTab.value = 'preview'
 }
 
@@ -475,11 +522,9 @@ function escapeHtml(str: string): string {
           <button class="primary" @click="applyYamlEdit">{{ t('common.actions.apply') }}</button>
         </div>
         <div v-if="yamlError" class="yaml-error">{{ yamlError }}</div>
-        <RichCodeEditor
+        <ClangFormatYamlEditor
           v-model="yamlText"
           class="yaml-editor"
-          lang="yaml"
-          :tab-size="2"
         />
       </div>
     </div>

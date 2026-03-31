@@ -26,6 +26,19 @@
   --diff-removed-border: #f38ba844;
   --diff-placeholder-bg: #ffffff08;
 
+  /* Code syntax colors - aligned with Shiki vitesse-dark */
+  --code-token-comment: #758575dd;
+  --code-token-punctuation: #666666;
+  --code-token-keyword: #4d9375;
+  --code-token-storage: #cb7676;
+  --code-token-string: #c98a7d;
+  --code-token-number: #c99076;
+  --code-token-entity: #80a665;
+  --code-token-type: #5d99a9;
+  --code-token-class: #6872ab;
+  --code-token-property: #b8a965;
+  --code-token-namespace: #db889a;
+
   --scrollbar-thumb: #45475a;
   --scrollbar-track: #1e1e2e;
 
@@ -77,6 +90,19 @@
   --diff-removed-bg: #d20f3918;
   --diff-removed-border: #d20f3930;
   --diff-placeholder-bg: #00000006;
+
+  /* Code syntax colors - aligned with Shiki vitesse-light */
+  --code-token-comment: #a0ada0;
+  --code-token-punctuation: #999999;
+  --code-token-keyword: #1e754f;
+  --code-token-storage: #ab5959;
+  --code-token-string: #b56959;
+  --code-token-number: #a65e2b;
+  --code-token-entity: #59873a;
+  --code-token-type: #2e808f;
+  --code-token-class: #5a6aa6;
+  --code-token-property: #998418;
+  --code-token-namespace: #b05a78;
 
   --scrollbar-thumb: #bcc0cc;
   --scrollbar-track: #eff1f5;

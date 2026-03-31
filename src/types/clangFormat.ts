@@ -4,7 +4,7 @@
 
 // ===== 枚举类型 =====
 
-export type BasedOnStyle = 'LLVM' | 'Google' | 'Chromium' | 'Mozilla' | 'WebKit' | 'Microsoft' | 'GNU'
+export type BasedOnStyle = 'LLVM' | 'Google' | 'Chromium' | 'Mozilla' | 'WebKit' | 'Microsoft' | 'GNU' | 'InheritParentConfig'
 
 export type UseTabStyle = 'Never' | 'ForIndentation' | 'ForContinuationAndIndentation' | 'AlignWithSpaces' | 'Always'
 

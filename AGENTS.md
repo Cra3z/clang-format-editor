@@ -16,7 +16,8 @@ and exports a `.clang-format` file.
 - **State management**: Pinia
 - **Styling**: SCSS / CSS Variables (dark / light themes)
 - **Code highlighting**: Shiki (live code preview panel)
-- **YAML handling**: js-yaml (read/write `.clang-format` files)
+- **YAML handling**: js-yaml (read/write `.clang-format` files), `yaml` pkg (AST parsing for diagnostics)
+- **Schema validation**: `ajv` (JSON Schema validation), local `src/data/clangFormatSchema.json` (SchemaStore 21.x + compat overlay)
 
 ## Project Structure
 
@@ -39,18 +40,23 @@ clang-format-editor/
 │   │       ├── variables.scss   # CSS custom properties (dark & light themes)
 │   │       └── global.scss      # Global reset and base styles
 │   ├── components/
-│   │   ├── CodePreview.vue      # Shiki-highlighted C++ / YAML preview panel
-│   │   ├── OptionControl.vue    # Universal form control (toggle/select/number/text)
-│   │   ├── OptionGroup.vue      # Collapsible option group container
-│   │   ├── SideNav.vue          # Left navigation sidebar
-│   │   └── Toolbar.vue          # Top toolbar (preset selector, import/export/theme)
+│   │   ├── CodePreview.vue           # Shiki-highlighted C++ / YAML preview panel; apply-YAML flow
+│   │   ├── ClangFormatYamlEditor.vue # CodeMirror 6 YAML editor with schema-driven lint + completion
+│   │   ├── OptionControl.vue         # Universal form control (toggle/select/number/text)
+│   │   ├── OptionGroup.vue           # Collapsible option group container
+│   │   ├── SideNav.vue               # Left navigation sidebar
+│   │   └── Toolbar.vue               # Top toolbar (preset selector, import/export/theme)
+│   ├── lib/
+│   │   ├── clangFormatSchema.ts      # Schema loader, $ref resolver, completion/meta helpers
+│   │   └── clangFormatValidation.ts  # YAML AST parse + Ajv schema validation → CodeMirror diagnostics
 │   ├── stores/
-│   │   └── formatStore.ts       # Pinia store — config state, YAML export/import
+│   │   └── formatStore.ts       # Pinia store — config state (initialized with full LLVM defaults), YAML export/import
 │   ├── types/
 │   │   └── clangFormat.ts       # TypeScript type definitions for all clang-format options
 │   ├── data/
-│   │   ├── presets.ts           # LLVM defaults + per-preset override objects
-│   │   └── sampleCode.ts        # Sample C++ code used in the preview panel
+│   │   ├── clangFormatSchema.json  # Vendored SchemaStore clang-format-21.x schema
+│   │   ├── presets.ts              # LLVM defaults + per-preset override objects
+│   │   └── sampleCode.ts           # Sample C++ code used in the preview panel
 │   └── views/                   # One page per option category
 │       ├── General.vue
 │       ├── TabsAndIndents.vue
@@ -67,7 +73,7 @@ clang-format-editor/
 ## Core Feature Modules
 
 ### 1. Preset Style Selection (BasedOnStyle)
-- Supported presets: LLVM, Google, Chromium, Mozilla, WebKit, Microsoft, GNU
+- Supported presets: LLVM, Google, Chromium, Mozilla, WebKit, Microsoft, GNU, InheritParentConfig
 - Selecting a preset auto-fills all option defaults
 - Export only outputs options that differ from the preset (keeps files minimal)
 
@@ -196,6 +202,21 @@ Corresponding clang-format options:
 - Supports light and dark themes
 - Defaults to dark theme (IDE-style)
 - Theme persisted to `localStorage`
+
+## Schema-Driven Validation
+
+The YAML editor (`ClangFormatYamlEditor.vue`) and import flow both use a shared validation pipeline:
+
+1. **`src/lib/clangFormatSchema.ts`** — Loads `src/data/clangFormatSchema.json` (SchemaStore 21.x), resolves `$ref` references, applies a compatibility overlay for legacy clang-format value forms (`BinPackParameters`, `SortIncludes`, `ReflowComments`, `SortUsingDeclarations`, `Cpp11BracedListStyle`), and exposes schema-derived completion/meta helpers.
+2. **`src/lib/clangFormatValidation.ts`** — Parses YAML with AST source ranges using the `yaml` package, validates the parsed object via `ajv`, maps schema errors back to byte-precise CodeMirror `Diagnostic` positions, and exports `validateClangFormatYaml()` and `buildClangFormatStyle()`.
+3. **`CodePreview.vue` apply flow** — Validates YAML first, then runs a clang-format trial invocation. Only on success does it commit the config to the store and switch to the preview tab.
+4. **`Toolbar.vue` import flow** — Validates with `validateClangFormatYaml()` and shows an auto-dismissing toast with the first validation error message if the file is invalid.
+
+### Important architectural rules
+- **Do not bypass `validateClangFormatYaml`** when importing or applying YAML. Always use it as the single entry point.
+- **`store.applyImportedConfig()`** is the correct API for committing a validated config object; `store.importYaml()` is a thin wrapper that also validates internally and is suitable for programmatic callers.
+- **`buildClangFormatStyle(config)`** serializes the config as JSON (not YAML newline-to-comma) for the `--style=` argument, which correctly handles nested/object options like `BraceWrapping` and `KeepEmptyLines`.
+- **`formatStore.ts` `config` ref** is initialized with the full LLVM preset defaults via `getPresetDefaults('LLVM')`. Do not initialize it with a partial object, or the option controls will have no values on first load.
 
 ## Coding Conventions
 

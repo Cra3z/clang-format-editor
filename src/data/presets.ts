@@ -107,7 +107,7 @@ const llvmDefaults: ClangFormatConfig = {
   QualifierAlignment: 'Leave',
 }
 
-const presetOverrides: Record<BasedOnStyle, Partial<ClangFormatConfig>> = {
+const presetOverrides: Record<Exclude<BasedOnStyle, 'InheritParentConfig'>, Partial<ClangFormatConfig>> = {
   LLVM: {},
   Google: {
     IndentWidth: 2,
@@ -174,9 +174,13 @@ const presetOverrides: Record<BasedOnStyle, Partial<ClangFormatConfig>> = {
 }
 
 export function getPresetDefaults(preset: BasedOnStyle): ClangFormatConfig {
+  if (preset === 'InheritParentConfig') {
+    return { BasedOnStyle: preset }
+  }
+
   return { ...llvmDefaults, ...presetOverrides[preset], BasedOnStyle: preset }
 }
 
 export const presetNames: BasedOnStyle[] = [
-  'LLVM', 'Google', 'Chromium', 'Mozilla', 'WebKit', 'Microsoft', 'GNU',
+  'LLVM', 'Google', 'Chromium', 'Mozilla', 'WebKit', 'Microsoft', 'GNU', 'InheritParentConfig',
 ]
