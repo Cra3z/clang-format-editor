@@ -35,7 +35,7 @@
 |---|---|
 | [Node.js](https://nodejs.org/) | ≥ 18 |
 | [Rust](https://rustup.rs/) | stable（通过 `rustup` 安装） |
-| [clang-format](https://clang.llvm.org/docs/ClangFormat.html) | 任意版本（实时预览所需） |
+| [clang-format](https://clang.llvm.org/docs/ClangFormat.html) | 任意版本 |
 
 > **Windows 用户**：在安装 Rust 之前，请先安装 [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)，并勾选 **使用 C++ 的桌面开发** 工作负载。
 
@@ -47,14 +47,14 @@ git clone https://github.com/your-name/clang-format-editor.git
 cd clang-format-editor
 
 # 2. 安装 Node 依赖
-npm install
+pnpm install
 ```
 
 ## 运行
 
 ```bash
 # 开发模式 — 前端与 Rust 后端均支持热重载
-npm run tauri dev
+pnpm run tauri dev
 ```
 
 Vite 会在 `http://localhost:1420` 启动，Tauri 自动打开桌面窗口。  
@@ -64,67 +64,7 @@ Vite 会在 `http://localhost:1420` 启动，Tauri 自动打开桌面窗口。
 
 ```bash
 # 构建生产环境桌面安装包
-npm run tauri build
+pnpm run tauri build
 ```
 
 输出文件位于 `src-tauri/target/release/bundle/`。
-
-## 项目结构
-
-```
-clang-format-editor/
-├── src/                         # Vue 3 前端
-│   ├── App.vue                  # 根组件 — 三栏布局
-│   ├── main.ts                  # 入口；Router + Pinia 初始化
-│   ├── assets/styles/           # SCSS 变量（主题）+ 全局样式
-│   ├── components/
-│   │   ├── CodePreview.vue      # Shiki 语法高亮代码 / YAML 预览
-│   │   ├── OptionControl.vue    # 通用表单控件（开关/下拉/数字/文本）
-│   │   ├── OptionGroup.vue      # 可折叠选项分组容器
-│   │   ├── SideNav.vue          # 左侧导航栏
-│   │   └── Toolbar.vue          # 顶部工具栏（预设、导入、导出、主题）
-│   ├── stores/formatStore.ts    # Pinia store — 配置状态、YAML 导入导出
-│   ├── types/clangFormat.ts     # 所有选项的 TypeScript 类型定义
-│   ├── data/
-│   │   ├── presets.ts           # LLVM 默认值 + 各预设覆盖对象
-│   │   └── sampleCode.ts        # 预览面板示例 C++ 代码
-│   └── views/                   # 每个分类对应一个页面
-│       ├── General.vue
-│       ├── TabsAndIndents.vue
-│       ├── Spaces.vue
-│       ├── WrappingAndBraces.vue
-│       ├── BlankLines.vue
-│       └── Alignment.vue
-├── src-tauri/                   # Tauri / Rust 后端
-│   ├── src/
-│   │   ├── main.rs              # 入口
-│   │   ├── lib.rs               # 插件注册
-│   │   └── commands/mod.rs      # format_code、get_clang_format_version 命令
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-├── package.json
-├── vite.config.ts
-└── index.html
-```
-
-## 技术栈
-
-| 层级 | 技术 |
-|---|---|
-| 桌面外壳 | [Tauri v2](https://v2.tauri.app/)（Rust） |
-| 前端 | [Vue 3](https://vuejs.org/) + TypeScript |
-| 状态管理 | [Pinia](https://pinia.vuejs.org/) |
-| 构建工具 | [Vite](https://vitejs.dev/) |
-| 语法高亮 | [Shiki](https://shiki.style/) |
-| YAML | [js-yaml](https://github.com/nodeca/js-yaml) |
-| 样式 | SCSS + CSS 自定义属性 |
-
-## 参考资料
-
-- [clang-format Style Options](https://clang.llvm.org/docs/ClangFormatStyleOptions.html)
-- [Tauri v2 文档](https://v2.tauri.app/)
-- [Vue 3 文档](https://vuejs.org/)
-
-## 许可证
-
-MIT

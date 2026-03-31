@@ -206,6 +206,7 @@ Corresponding clang-format options:
 - Shared logic extracted to composables under `src/composables/`
 - Global state via Pinia
 - CSS via BEM naming or scoped styles
+- Prefer `pnpm` over `npm` 
 
 ### Backend (Rust)
 - Follow standard Rust style (rustfmt)
@@ -217,13 +218,13 @@ Corresponding clang-format options:
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Development mode (hot-reload)
-npm run tauri dev
+pnpm run tauri dev
 
 # Build production installer
-npm run tauri build
+pnpm run tauri build
 ```
 
 ## Key References
