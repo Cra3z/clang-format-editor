@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useSettingsStore } from './stores/settingsStore'
 import SideNav from './components/SideNav.vue'
 import Toolbar from './components/Toolbar.vue'
 import CodePreview from './components/CodePreview.vue'
 
 const settingsStore = useSettingsStore()
+const route = useRoute()
 
 const OUTER_SPLITTER_STORAGE_KEY = 'layout-option-panel-percent'
+const OUTER_SPLITTER_WIDTH = 6
+const PANEL_HARD_MIN_WIDTH = 220
+const OPTIONS_PANEL_IDEAL_MIN_WIDTH = 320
+const PREVIEW_PANEL_IDEAL_MIN_WIDTH = 320
 
 function readStoredOptionPanelPercent() {
   const stored = Number(localStorage.getItem(OUTER_SPLITTER_STORAGE_KEY))
@@ -20,6 +26,42 @@ function readStoredOptionPanelPercent() {
 
 const optionPanelPercent = ref(readStoredOptionPanelPercent())
 const isDragging = ref(false)
+const appContent = ref<HTMLElement | null>(null)
+const optionsPanel = ref<HTMLElement | null>(null)
+let appContentResizeObserver: ResizeObserver | null = null
+
+function getOptionPanelBounds(containerWidth: number) {
+  const minOptionWidth = Math.min(
+    OPTIONS_PANEL_IDEAL_MIN_WIDTH,
+    Math.max(PANEL_HARD_MIN_WIDTH, containerWidth - PREVIEW_PANEL_IDEAL_MIN_WIDTH - OUTER_SPLITTER_WIDTH),
+  )
+  const minPreviewWidth = Math.min(
+    PREVIEW_PANEL_IDEAL_MIN_WIDTH,
+    Math.max(PANEL_HARD_MIN_WIDTH, containerWidth - minOptionWidth - OUTER_SPLITTER_WIDTH),
+  )
+
+  return {
+    minOptionWidth,
+    maxOptionWidth: Math.max(minOptionWidth, containerWidth - minPreviewWidth - OUTER_SPLITTER_WIDTH),
+  }
+}
+
+function clampOptionPanelPercent(percent: number, containerWidth: number) {
+  const safePercent = Math.min(65, Math.max(30, percent))
+  if (!Number.isFinite(containerWidth) || containerWidth <= 0) {
+    return safePercent
+  }
+
+  const { minOptionWidth, maxOptionWidth } = getOptionPanelBounds(containerWidth)
+  const currentWidth = (safePercent / 100) * containerWidth
+  const clampedWidth = Math.min(maxOptionWidth, Math.max(minOptionWidth, currentWidth))
+  return (clampedWidth / containerWidth) * 100
+}
+
+function syncOptionPanelPercent() {
+  const containerWidth = appContent.value?.getBoundingClientRect().width ?? 0
+  optionPanelPercent.value = clampOptionPanelPercent(optionPanelPercent.value, containerWidth)
+}
 
 function onSplitterDown(e: PointerEvent) {
   isDragging.value = true
@@ -27,19 +69,13 @@ function onSplitterDown(e: PointerEvent) {
 }
 
 function onSplitterMove(e: PointerEvent) {
-  if (!isDragging.value) {
+  if (!isDragging.value || !appContent.value) {
     return
   }
 
-  const content = document.querySelector('.app-content') as HTMLElement | null
-  if (!content) {
-    return
-  }
-
-  const rect = content.getBoundingClientRect()
+  const rect = appContent.value.getBoundingClientRect()
   const x = e.clientX - rect.left
-  const pct = Math.min(65, Math.max(30, (x / rect.width) * 100))
-  optionPanelPercent.value = pct
+  optionPanelPercent.value = clampOptionPanelPercent((x / rect.width) * 100, rect.width)
 }
 
 function onSplitterUp() {
@@ -50,8 +86,26 @@ watch(optionPanelPercent, (value) => {
   localStorage.setItem(OUTER_SPLITTER_STORAGE_KEY, String(value))
 })
 
+watch(() => route.path, async () => {
+  await nextTick()
+  optionsPanel.value?.scrollTo({ top: 0, behavior: 'auto' })
+})
+
 onMounted(() => {
   void settingsStore.refreshDetectedClangFormat()
+
+  syncOptionPanelPercent()
+
+  if (appContent.value) {
+    appContentResizeObserver = new ResizeObserver(() => {
+      syncOptionPanelPercent()
+    })
+    appContentResizeObserver.observe(appContent.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  appContentResizeObserver?.disconnect()
 })
 </script>
 
@@ -60,8 +114,8 @@ onMounted(() => {
     <Toolbar />
     <div class="app-body">
       <SideNav />
-      <main class="app-content">
-        <div class="options-panel" :style="{ width: optionPanelPercent + '%' }">
+      <main ref="appContent" class="app-content">
+        <div ref="optionsPanel" class="options-panel" :style="{ width: optionPanelPercent + '%' }">
           <router-view />
         </div>
         <div
@@ -104,7 +158,7 @@ onMounted(() => {
   overflow-y: auto;
   padding: 16px 20px;
   border-right: 1px solid var(--border-color);
-  min-width: 380px;
+  min-width: 0;
 }
 
 .panel-splitter {
@@ -125,6 +179,6 @@ onMounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-width: 420px;
+  min-width: 0;
 }
 </style>

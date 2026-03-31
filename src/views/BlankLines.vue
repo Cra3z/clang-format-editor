@@ -2,18 +2,24 @@
 import { useFormatStore } from '@/stores/formatStore'
 import OptionGroup from '@/components/OptionGroup.vue'
 import OptionControl from '@/components/OptionControl.vue'
+import { useI18n } from 'vue-i18n'
 
 const store = useFormatStore()
+const { t } = useI18n()
+
+function optionDescription(key: string) {
+  return t(`views.blankLines.options.${key}`)
+}
 </script>
 
 <template>
   <div class="view-page">
-    <h2 class="page-title">空行</h2>
+    <h2 class="page-title">{{ t('views.blankLines.title') }}</h2>
 
-    <OptionGroup label="保留空行">
+    <OptionGroup :label="t('views.blankLines.groups.keep')">
       <OptionControl
         label="MaxEmptyLinesToKeep"
-        description="最大保留的连续空行数"
+        :description="optionDescription('MaxEmptyLinesToKeep')"
         type="integer"
         :modelValue="store.config.MaxEmptyLinesToKeep"
         :min="0" :max="10"
@@ -21,10 +27,10 @@ const store = useFormatStore()
       />
     </OptionGroup>
 
-    <OptionGroup label="访问修饰符空行">
+    <OptionGroup :label="t('views.blankLines.groups.access')">
       <OptionControl
         label="EmptyLineAfterAccessModifier"
-        description="访问修饰符后的空行"
+        :description="optionDescription('EmptyLineAfterAccessModifier')"
         type="enum"
         :modelValue="store.config.EmptyLineAfterAccessModifier"
         :enumValues="['Never', 'Leave', 'Always']"
@@ -32,7 +38,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="EmptyLineBeforeAccessModifier"
-        description="访问修饰符前的空行"
+        :description="optionDescription('EmptyLineBeforeAccessModifier')"
         type="enum"
         :modelValue="store.config.EmptyLineBeforeAccessModifier"
         :enumValues="['Never', 'Leave', 'LogicalBlock', 'Always']"
@@ -40,10 +46,10 @@ const store = useFormatStore()
       />
     </OptionGroup>
 
-    <OptionGroup label="定义块间空行">
+    <OptionGroup :label="t('views.blankLines.groups.definitions')">
       <OptionControl
         label="SeparateDefinitionBlocks"
-        description="使用空行分隔定义块（类、函数、枚举等）"
+        :description="optionDescription('SeparateDefinitionBlocks')"
         type="enum"
         :modelValue="store.config.SeparateDefinitionBlocks"
         :enumValues="['Leave', 'Always', 'Never']"

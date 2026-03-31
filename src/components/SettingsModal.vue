@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { useSettingsStore, type AppLocale, type AppTheme } from '@/stores/settingsStore'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   open: boolean
@@ -12,6 +13,7 @@ const emit = defineEmits<{
 }>()
 
 const settingsStore = useSettingsStore()
+const { t } = useI18n()
 const themeDraft = ref<AppTheme>(settingsStore.theme)
 const clangFormatExecutablePathDraft = ref(settingsStore.clangFormatExecutablePath)
 const localeDraft = ref<AppLocale>(settingsStore.locale)
@@ -22,22 +24,16 @@ let versionCheckTimeout: ReturnType<typeof setTimeout> | null = null
 
 const isTauri = '__TAURI_INTERNALS__' in window
 
-const hasDraftChanges = computed(() => {
-  return themeDraft.value !== settingsStore.theme
-    || clangFormatExecutablePathDraft.value.trim() !== settingsStore.clangFormatExecutablePath
-    || localeDraft.value !== settingsStore.locale
-})
-
 const clangFormatInputPlaceholder = computed(() => {
   return settingsStore.detectedClangFormatExecutablePath
-    || '自动检测到的 clang-format 绝对路径会显示在这里'
+    || t('settings.clangFormat.placeholder')
 })
 
 const clangFormatStatus = computed(() => {
   if (isCheckingVersion.value || settingsStore.isDetectingClangFormat) {
     return {
       kind: 'pending',
-      text: '检测中...',
+      text: t('settings.clangFormat.status.pending'),
       title: '',
     }
   }
@@ -52,8 +48,8 @@ const clangFormatStatus = computed(() => {
 
   return {
     kind: 'error',
-    text: '未知的clang-format',
-    title: clangFormatVersionError.value || '未检测到可用的 clang-format',
+    text: t('settings.clangFormat.status.unknown'),
+    title: clangFormatVersionError.value || t('settings.clangFormat.errors.detectFailed'),
   }
 })
 
@@ -90,6 +86,7 @@ function scheduleVersionCheck() {
   }
 
   versionCheckTimeout = setTimeout(() => {
+    settingsStore.clangFormatExecutablePath = clangFormatExecutablePathDraft.value.trim()
     void checkClangFormatVersion()
   }, 450)
 }
@@ -99,7 +96,7 @@ async function checkClangFormatVersion() {
   clangFormatVersionError.value = ''
 
   if (!isTauri) {
-    clangFormatVersionError.value = '当前是浏览器预览模式，无法检测 clang-format 可执行文件。'
+    clangFormatVersionError.value = t('settings.clangFormat.errors.browserVersion')
     return
   }
 
@@ -111,7 +108,7 @@ async function checkClangFormatVersion() {
     if (!target) {
       const detected = await settingsStore.refreshDetectedClangFormat(true)
       if (!detected) {
-        throw new Error('未检测到可用的 clang-format，可手动浏览选择程序文件。')
+        throw new Error(t('settings.clangFormat.errors.detectFailed'))
       }
 
       clangFormatVersion.value = detected.version
@@ -121,7 +118,7 @@ async function checkClangFormatVersion() {
     const info = await settingsStore.inspectClangFormat(target)
     clangFormatVersion.value = info.version
   } catch (error) {
-    clangFormatVersionError.value = getErrorMessage(error, '无法检测 clang-format 版本。')
+    clangFormatVersionError.value = getErrorMessage(error, t('settings.clangFormat.errors.inspectFailed'))
   } finally {
     isCheckingVersion.value = false
   }
@@ -129,7 +126,7 @@ async function checkClangFormatVersion() {
 
 async function browseExecutablePath() {
   if (!isTauri) {
-    clangFormatVersionError.value = '当前是浏览器预览模式，无法浏览本机可执行文件。'
+    clangFormatVersionError.value = t('settings.clangFormat.errors.browserBrowse')
     return
   }
 
@@ -137,7 +134,7 @@ async function browseExecutablePath() {
     const selected = await openDialog({
       directory: false,
       multiple: false,
-      title: '选择 clang-format 可执行文件',
+      title: t('settings.clangFormat.browseTitle'),
       defaultPath: clangFormatExecutablePathDraft.value.trim() || settingsStore.detectedClangFormatExecutablePath || undefined,
     })
 
@@ -146,19 +143,17 @@ async function browseExecutablePath() {
       void checkClangFormatVersion()
     }
   } catch (error) {
-    clangFormatVersionError.value = getErrorMessage(error, '打开文件选择器失败。')
+    clangFormatVersionError.value = getErrorMessage(error, t('settings.clangFormat.errors.browseFailed'))
   }
 }
 
-function applySettings() {
-  settingsStore.theme = themeDraft.value
-  settingsStore.clangFormatExecutablePath = clangFormatExecutablePathDraft.value.trim()
-  settingsStore.locale = localeDraft.value
-  emit('close')
-}
+function closeModal() {
+  if (versionCheckTimeout) {
+    clearTimeout(versionCheckTimeout)
+    versionCheckTimeout = null
+  }
 
-function handleCancel() {
-  syncDraftFromStore()
+  settingsStore.clangFormatExecutablePath = clangFormatExecutablePathDraft.value.trim()
   emit('close')
 }
 
@@ -168,7 +163,7 @@ function handleSettingsEscape(event: KeyboardEvent) {
   }
 
   event.preventDefault()
-  handleCancel()
+  closeModal()
 }
 
 watch(() => props.open, async (open) => {
@@ -198,9 +193,27 @@ watch(clangFormatExecutablePathDraft, () => {
     : settingsStore.detectedClangFormatVersion
   clangFormatVersionError.value = ''
 
-  if (clangFormatExecutablePathDraft.value.trim()) {
-    scheduleVersionCheck()
+  if (!props.open) {
+    return
   }
+
+  scheduleVersionCheck()
+})
+
+watch(themeDraft, (value) => {
+  if (!props.open) {
+    return
+  }
+
+  settingsStore.theme = value
+})
+
+watch(localeDraft, (value) => {
+  if (!props.open) {
+    return
+  }
+
+  settingsStore.locale = value
 })
 
 watch(() => settingsStore.detectedClangFormatExecutablePath, () => {
@@ -225,28 +238,28 @@ onBeforeUnmount(() => {
     <div class="settings-modal">
       <div class="settings-header">
         <div>
-          <h3>设置</h3>
-          <p>管理应用主题、clang-format 可执行文件路径，以及后续会扩展的区域设置。</p>
+          <h3>{{ t('settings.title') }}</h3>
+          <p>{{ t('settings.subtitle') }}</p>
         </div>
-        <button class="settings-close" @click="handleCancel">关闭</button>
+        <button class="settings-close" @click="closeModal">{{ t('common.actions.close') }}</button>
       </div>
 
       <div class="settings-content">
         <section class="settings-section">
-          <div class="settings-section-title">外观</div>
+          <div class="settings-section-title">{{ t('settings.sections.appearance') }}</div>
           <label class="settings-field">
-            <span>主题</span>
+            <span>{{ t('settings.fields.theme') }}</span>
             <select v-model="themeDraft">
-              <option value="dark">深色</option>
-              <option value="light">浅色</option>
+              <option value="dark">{{ t('common.theme.dark') }}</option>
+              <option value="light">{{ t('common.theme.light') }}</option>
             </select>
           </label>
         </section>
 
         <section class="settings-section">
-          <div class="settings-section-title">clang-format</div>
+          <div class="settings-section-title">{{ t('settings.sections.clangFormat') }}</div>
           <div class="settings-field">
-            <span>程序文件路径</span>
+            <span>{{ t('settings.fields.executablePath') }}</span>
             <div class="settings-input-group">
               <input
                 v-model="clangFormatExecutablePathDraft"
@@ -254,7 +267,7 @@ onBeforeUnmount(() => {
                 type="text"
                 :placeholder="clangFormatInputPlaceholder"
               />
-              <button type="button" class="settings-browse-button" @click="browseExecutablePath">浏览...</button>
+              <button type="button" class="settings-browse-button" @click="browseExecutablePath">{{ t('common.actions.browse') }}</button>
             </div>
           </div>
           <div class="settings-version-row">
@@ -272,25 +285,16 @@ onBeforeUnmount(() => {
         </section>
 
         <section class="settings-section">
-          <div class="settings-section-title">区域设置</div>
+          <div class="settings-section-title">{{ t('settings.sections.locale') }}</div>
           <label class="settings-field">
-            <span>界面语言</span>
+            <span>{{ t('settings.fields.interfaceLanguage') }}</span>
             <select v-model="localeDraft">
-              <option value="system">跟随系统</option>
-              <option value="zh-CN">简体中文</option>
-              <option value="en-US">English</option>
+              <option value="system">{{ t('common.locale.system') }}</option>
+              <option value="zh-CN">{{ t('common.locale.zhCN') }}</option>
+              <option value="en-US">{{ t('common.locale.enUS') }}</option>
             </select>
           </label>
-          <div class="settings-note">该选项目前仅保存设置，尚未驱动界面文案切换，后续可以继续扩展。</div>
         </section>
-      </div>
-
-      <div class="settings-footer">
-        <div class="settings-footer-hint" v-if="hasDraftChanges">你有尚未应用的更改。</div>
-        <div class="settings-footer-actions">
-          <button @click="handleCancel">取消</button>
-          <button class="primary" @click="applySettings">应用</button>
-        </div>
       </div>
     </div>
   </div>
@@ -449,12 +453,6 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--border-color) 20%, var(--bg-secondary));
 }
 
-.settings-note {
-  font-size: var(--font-size-sm);
-  line-height: 1.6;
-  color: var(--text-secondary);
-}
-
 .settings-success,
 .settings-error {
   padding: 10px 12px;
@@ -473,27 +471,6 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--error) 12%, transparent);
 }
 
-.settings-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 20px;
-  border-top: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-}
-
-.settings-footer-hint {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-}
-
-.settings-footer-actions {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
-}
-
 @media (max-width: 720px) {
   .settings-content {
     padding: 14px;
@@ -501,16 +478,6 @@ onBeforeUnmount(() => {
 
   .settings-section {
     padding: 14px;
-  }
-
-  .settings-footer {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .settings-footer-actions {
-    margin-left: 0;
-    justify-content: flex-end;
   }
 }
 </style>

@@ -2,18 +2,24 @@
 import { useFormatStore } from '@/stores/formatStore'
 import OptionGroup from '@/components/OptionGroup.vue'
 import OptionControl from '@/components/OptionControl.vue'
+import { useI18n } from 'vue-i18n'
 
 const store = useFormatStore()
+const { t } = useI18n()
+
+function optionDescription(key: string) {
+  return t(`views.general.options.${key}`)
+}
 </script>
 
 <template>
   <div class="view-page">
-    <h2 class="page-title">通用设置</h2>
+    <h2 class="page-title">{{ t('views.general.title') }}</h2>
 
-    <OptionGroup label="基础配置">
+    <OptionGroup :label="t('views.general.groups.base')">
       <OptionControl
         label="BasedOnStyle"
-        description="基础风格预设"
+        :description="optionDescription('BasedOnStyle')"
         type="enum"
         :modelValue="store.config.BasedOnStyle"
         :enumValues="['LLVM', 'Google', 'Chromium', 'Mozilla', 'WebKit', 'Microsoft', 'GNU']"
@@ -21,7 +27,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="Language"
-        description="目标语言"
+        :description="optionDescription('Language')"
         type="enum"
         :modelValue="store.config.Language"
         :enumValues="['None', 'C', 'Cpp', 'CSharp', 'Java', 'JavaScript', 'Json', 'ObjC', 'Proto', 'TableGen', 'TextProto', 'Verilog']"
@@ -29,7 +35,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="Standard"
-        description="C++ 标准版本"
+        :description="optionDescription('Standard')"
         type="enum"
         :modelValue="store.config.Standard"
         :enumValues="['c++03', 'c++11', 'c++14', 'c++17', 'c++20', 'Latest', 'Auto']"
@@ -37,7 +43,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="ColumnLimit"
-        description="列宽限制（0 表示无限制）"
+        :description="optionDescription('ColumnLimit')"
         type="integer"
         :modelValue="store.config.ColumnLimit"
         :min="0"
@@ -46,7 +52,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="LineEnding"
-        description="行尾风格"
+        :description="optionDescription('LineEnding')"
         type="enum"
         :modelValue="store.config.LineEnding ?? 'DeriveLF'"
         :enumValues="['LF', 'CRLF', 'DeriveLF', 'DeriveCRLF']"
@@ -54,34 +60,34 @@ const store = useFormatStore()
       />
     </OptionGroup>
 
-    <OptionGroup label="自动功能">
+    <OptionGroup :label="t('views.general.groups.automation')">
       <OptionControl
         label="DerivePointerAlignment"
-        description="从文件自动推导指针对齐方式"
+        :description="optionDescription('DerivePointerAlignment')"
         type="boolean"
         :modelValue="store.config.DerivePointerAlignment"
         @update:modelValue="store.setOption('DerivePointerAlignment', $event as boolean)"
       />
       <OptionControl
         label="DisableFormat"
-        description="完全禁用格式化"
+        :description="optionDescription('DisableFormat')"
         type="boolean"
         :modelValue="store.config.DisableFormat"
         @update:modelValue="store.setOption('DisableFormat', $event as boolean)"
       />
     </OptionGroup>
 
-    <OptionGroup label="注释与 Include">
+    <OptionGroup :label="t('views.general.groups.commentsIncludes')">
       <OptionControl
         label="FixNamespaceComments"
-        description="修复命名空间末尾注释"
+        :description="optionDescription('FixNamespaceComments')"
         type="boolean"
         :modelValue="store.config.FixNamespaceComments"
         @update:modelValue="store.setOption('FixNamespaceComments', $event as boolean)"
       />
       <OptionControl
         label="SortIncludes"
-        description="排序 #include 指令"
+        :description="optionDescription('SortIncludes')"
         type="enum"
         :modelValue="store.config.SortIncludes"
         :enumValues="['Never', 'CaseSensitive', 'CaseInsensitive']"
@@ -89,7 +95,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="IncludeBlocks"
-        description="#include 块处理方式"
+        :description="optionDescription('IncludeBlocks')"
         type="enum"
         :modelValue="store.config.IncludeBlocks"
         :enumValues="['Preserve', 'Merge', 'Regroup']"
@@ -97,7 +103,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="SortUsingDeclarations"
-        description="排序 using 声明"
+        :description="optionDescription('SortUsingDeclarations')"
         type="enum"
         :modelValue="store.config.SortUsingDeclarations"
         :enumValues="['Never', 'Lexicographic', 'LexicographicNumeric']"
@@ -105,7 +111,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="ReflowComments"
-        description="重排注释以适应列宽"
+        :description="optionDescription('ReflowComments')"
         type="enum"
         :modelValue="String(store.config.ReflowComments)"
         :enumValues="['Never', 'IndentOnly', 'Always', 'true', 'false']"
@@ -113,38 +119,38 @@ const store = useFormatStore()
       />
     </OptionGroup>
 
-    <OptionGroup label="代码修改">
+    <OptionGroup :label="t('views.general.groups.codeChanges')">
       <OptionControl
         label="InsertBraces"
-        description="为控制语句插入花括号"
+        :description="optionDescription('InsertBraces')"
         type="boolean"
         :modelValue="store.config.InsertBraces"
         @update:modelValue="store.setOption('InsertBraces', $event as boolean)"
       />
       <OptionControl
         label="InsertNewlineAtEOF"
-        description="文件末尾插入换行"
+        :description="optionDescription('InsertNewlineAtEOF')"
         type="boolean"
         :modelValue="store.config.InsertNewlineAtEOF"
         @update:modelValue="store.setOption('InsertNewlineAtEOF', $event as boolean)"
       />
       <OptionControl
         label="RemoveBracesLLVM"
-        description="移除不必要的花括号（LLVM 风格）"
+        :description="optionDescription('RemoveBracesLLVM')"
         type="boolean"
         :modelValue="store.config.RemoveBracesLLVM"
         @update:modelValue="store.setOption('RemoveBracesLLVM', $event as boolean)"
       />
       <OptionControl
         label="RemoveSemicolon"
-        description="移除函数定义后多余的分号"
+        :description="optionDescription('RemoveSemicolon')"
         type="boolean"
         :modelValue="store.config.RemoveSemicolon"
         @update:modelValue="store.setOption('RemoveSemicolon', $event as boolean)"
       />
       <OptionControl
         label="QualifierAlignment"
-        description="const/volatile 限定符位置"
+        :description="optionDescription('QualifierAlignment')"
         type="enum"
         :modelValue="store.config.QualifierAlignment"
         :enumValues="['Leave', 'Left', 'Right', 'Custom']"

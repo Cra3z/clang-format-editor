@@ -4,12 +4,14 @@ import { useFormatStore } from '@/stores/formatStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import type { Highlighter } from 'shiki'
 import { diffLines } from 'diff'
+import { useI18n } from 'vue-i18n'
 import RichCodeEditor from './RichCodeEditor.vue'
 import { sampleCode } from '@/data/sampleCode'
 import { getCodeHighlighter, getCodeThemeName, normalizeCodeLanguage, warmupCodeHighlighter } from '@/composables/useCodeHighlighter'
 
 const store = useFormatStore()
 const settingsStore = useSettingsStore()
+const { t } = useI18n()
 const activeTab = ref<'preview' | 'yaml'>('preview')
 const formattedCode = ref(store.previewCode)
 const formatError = ref('')
@@ -207,7 +209,7 @@ function discardEditDraft() {
 }
 
 function requestCloseEditModal() {
-  if (hasEditDraftChanges.value && !window.confirm('当前代码有未保存改动，确认放弃吗？')) {
+  if (hasEditDraftChanges.value && !window.confirm(t('preview.editModal.discardConfirm'))) {
     return
   }
 
@@ -236,7 +238,7 @@ function resetEditDraft() {
 function applyYamlEdit() {
   const ok = store.importYaml(yamlText.value)
   if (!ok) {
-    yamlError.value = 'YAML 解析失败，请检查缩进和字段格式。'
+    yamlError.value = t('preview.yamlParseError')
     return
   }
 
@@ -376,7 +378,7 @@ function escapeHtml(str: string): string {
           :class="{ active: activeTab === 'preview' }"
           @click="activeTab = 'preview'"
         >
-          代码预览
+          {{ t('preview.tabs.code') }}
         </button>
         <button
           :class="{ active: activeTab === 'yaml' }"
@@ -401,9 +403,9 @@ function escapeHtml(str: string): string {
           <!-- Left pane -->
           <div class="split-pane" :style="{ width: leftPanePercent + '%' }">
             <div class="pane-header">
-              <span class="pane-header-title">原始代码</span>
+              <span class="pane-header-title">{{ t('preview.pane.original') }}</span>
               <div class="pane-header-actions">
-                <button class="pane-header-button" @click="openEditModal">编辑</button>
+                <button class="pane-header-button" @click="openEditModal">{{ t('common.actions.edit') }}</button>
               </div>
             </div>
             <div ref="leftScrollEl" class="pane-scroll mono" @scroll="onLeftScroll">
@@ -434,11 +436,11 @@ function escapeHtml(str: string): string {
           <!-- Right pane -->
           <div class="split-pane" :style="{ width: (100 - leftPanePercent) + '%' }">
             <div class="pane-header">
-              <span class="pane-header-title">格式化后</span>
+              <span class="pane-header-title">{{ t('preview.pane.formatted') }}</span>
               <div class="pane-header-actions">
                 <label class="diff-toggle diff-toggle-inline">
                   <input type="checkbox" v-model="store.diffHighlightEnabled" />
-                  <span>显示差异</span>
+                  <span>{{ t('preview.showDiff') }}</span>
                 </label>
               </div>
             </div>
@@ -469,8 +471,8 @@ function escapeHtml(str: string): string {
         <div class="yaml-toolbar">
           <span class="yaml-toolbar-title">.clang-format</span>
           <div class="yaml-toolbar-spacer"></div>
-          <button class="copy-button" @click="copyYamlText">复制</button>
-          <button class="primary" @click="applyYamlEdit">应用</button>
+          <button class="copy-button" @click="copyYamlText">{{ t('common.actions.copy') }}</button>
+          <button class="primary" @click="applyYamlEdit">{{ t('common.actions.apply') }}</button>
         </div>
         <div v-if="yamlError" class="yaml-error">{{ yamlError }}</div>
         <RichCodeEditor
@@ -489,18 +491,18 @@ function escapeHtml(str: string): string {
       <div class="edit-modal" @keydown.ctrl.enter.prevent="applyEdit">
         <div class="edit-modal-header">
           <div>
-            <div class="edit-modal-title">编辑原始代码</div>
-            <div class="edit-modal-subtitle">修改左侧原始代码，应用后会重新格式化并更新差异。</div>
+            <div class="edit-modal-title">{{ t('preview.editModal.title') }}</div>
+            <div class="edit-modal-subtitle">{{ t('preview.editModal.subtitle') }}</div>
           </div>
-          <button class="edit-modal-close" @click="requestCloseEditModal">关闭</button>
+          <button class="edit-modal-close" @click="requestCloseEditModal">{{ t('common.actions.close') }}</button>
         </div>
 
         <div class="edit-modal-toolbar">
-          <button class="primary" @click="applyEdit">应用</button>
-          <button @click="resetEditDraft">还原默认示例</button>
+          <button class="primary" @click="applyEdit">{{ t('common.actions.apply') }}</button>
+          <button @click="resetEditDraft">{{ t('preview.editModal.restoreSample') }}</button>
           <div class="edit-toolbar-spacer"></div>
           <label class="lang-selector">
-            <span>语言:</span>
+            <span>{{ t('preview.language') }}</span>
             <select v-model="store.previewLanguage">
               <option v-for="opt in previewLangOptions" :key="opt.value" :value="opt.value">
                 {{ opt.label }}

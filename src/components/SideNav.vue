@@ -1,24 +1,26 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
+const { t } = useI18n()
 
-const navItems = [
-  { path: '/general', label: '通用', icon: '⚙' },
-  { path: '/tabs-and-indents', label: '缩进与制表符', icon: '→' },
-  { path: '/spaces', label: '空格', icon: '·' },
-  { path: '/wrapping-and-braces', label: '换行与花括号', icon: '⏎' },
-  { path: '/blank-lines', label: '空行', icon: '¶' },
-  { path: '/alignment', label: '对齐', icon: '⇔' },
-]
+const navItems = computed(() => [
+  { path: '/general', label: t('sidenav.items.general'), icon: '⚙' },
+  { path: '/tabs-and-indents', label: t('sidenav.items.tabsAndIndents'), icon: '→' },
+  { path: '/spaces', label: t('sidenav.items.spaces'), icon: '·' },
+  { path: '/wrapping-and-braces', label: t('sidenav.items.wrappingAndBraces'), icon: '⏎' },
+  { path: '/blank-lines', label: t('sidenav.items.blankLines'), icon: '¶' },
+  { path: '/alignment', label: t('sidenav.items.alignment'), icon: '⇔' },
+])
 
 const activePath = computed(() => route.path)
 </script>
 
 <template>
   <nav class="side-nav">
-    <div class="nav-header">选项分类</div>
+    <div class="nav-header">{{ t('sidenav.header') }}</div>
     <ul class="nav-list">
       <li v-for="item in navItems" :key="item.path">
         <router-link

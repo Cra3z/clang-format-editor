@@ -2,18 +2,24 @@
 import { useFormatStore } from '@/stores/formatStore'
 import OptionGroup from '@/components/OptionGroup.vue'
 import OptionControl from '@/components/OptionControl.vue'
+import { useI18n } from 'vue-i18n'
 
 const store = useFormatStore()
+const { t } = useI18n()
+
+function optionDescription(key: string) {
+  return t(`views.alignment.options.${key}`)
+}
 </script>
 
 <template>
   <div class="view-page">
-    <h2 class="page-title">对齐</h2>
+    <h2 class="page-title">{{ t('views.alignment.title') }}</h2>
 
-    <OptionGroup label="括号对齐">
+    <OptionGroup :label="t('views.alignment.groups.brackets')">
       <OptionControl
         label="AlignAfterOpenBracket"
-        description="左括号后的对齐方式"
+        :description="optionDescription('AlignAfterOpenBracket')"
         type="enum"
         :modelValue="store.config.AlignAfterOpenBracket"
         :enumValues="['Align', 'DontAlign', 'AlwaysBreak', 'BlockIndent']"
@@ -21,7 +27,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="AlignArrayOfStructures"
-        description="对齐结构体数组的列"
+        :description="optionDescription('AlignArrayOfStructures')"
         type="enum"
         :modelValue="store.config.AlignArrayOfStructures"
         :enumValues="['Left', 'Right', 'None']"
@@ -29,10 +35,10 @@ const store = useFormatStore()
       />
     </OptionGroup>
 
-    <OptionGroup label="连续赋值 / 声明对齐">
+    <OptionGroup :label="t('views.alignment.groups.consecutive')">
       <OptionControl
         label="AlignConsecutiveAssignments"
-        description="对齐连续的赋值语句"
+        :description="optionDescription('AlignConsecutiveAssignments')"
         type="enum"
         :modelValue="store.config.AlignConsecutiveAssignments"
         :enumValues="['None', 'Consecutive', 'AcrossEmptyLines', 'AcrossComments', 'AcrossEmptyLinesAndComments']"
@@ -40,7 +46,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="AlignConsecutiveBitFields"
-        description="对齐连续的位域定义"
+        :description="optionDescription('AlignConsecutiveBitFields')"
         type="enum"
         :modelValue="store.config.AlignConsecutiveBitFields"
         :enumValues="['None', 'Consecutive', 'AcrossEmptyLines', 'AcrossComments', 'AcrossEmptyLinesAndComments']"
@@ -48,7 +54,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="AlignConsecutiveDeclarations"
-        description="对齐连续的变量声明"
+        :description="optionDescription('AlignConsecutiveDeclarations')"
         type="enum"
         :modelValue="store.config.AlignConsecutiveDeclarations"
         :enumValues="['None', 'Consecutive', 'AcrossEmptyLines', 'AcrossComments', 'AcrossEmptyLinesAndComments']"
@@ -56,7 +62,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="AlignConsecutiveMacros"
-        description="对齐连续的宏定义"
+        :description="optionDescription('AlignConsecutiveMacros')"
         type="enum"
         :modelValue="store.config.AlignConsecutiveMacros"
         :enumValues="['None', 'Consecutive', 'AcrossEmptyLines', 'AcrossComments', 'AcrossEmptyLinesAndComments']"
@@ -64,10 +70,10 @@ const store = useFormatStore()
       />
     </OptionGroup>
 
-    <OptionGroup label="转义换行 / 操作符 / 注释对齐">
+    <OptionGroup :label="t('views.alignment.groups.misc')">
       <OptionControl
         label="AlignEscapedNewlines"
-        description="转义换行符的对齐方式"
+        :description="optionDescription('AlignEscapedNewlines')"
         type="enum"
         :modelValue="store.config.AlignEscapedNewlines"
         :enumValues="['DontAlign', 'Left', 'Right']"
@@ -75,7 +81,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="AlignOperands"
-        description="操作数的对齐方式"
+        :description="optionDescription('AlignOperands')"
         type="enum"
         :modelValue="store.config.AlignOperands"
         :enumValues="['DontAlign', 'Align', 'AlignAfterOperator']"
@@ -83,7 +89,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="AlignTrailingComments"
-        description="对齐行尾注释"
+        :description="optionDescription('AlignTrailingComments')"
         type="boolean"
         :modelValue="store.config.AlignTrailingComments"
         @update:modelValue="store.setOption('AlignTrailingComments', $event as boolean)"

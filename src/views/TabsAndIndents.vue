@@ -2,18 +2,24 @@
 import { useFormatStore } from '@/stores/formatStore'
 import OptionGroup from '@/components/OptionGroup.vue'
 import OptionControl from '@/components/OptionControl.vue'
+import { useI18n } from 'vue-i18n'
 
 const store = useFormatStore()
+const { t } = useI18n()
+
+function optionDescription(key: string) {
+  return t(`views.tabsAndIndents.options.${key}`)
+}
 </script>
 
 <template>
   <div class="view-page">
-    <h2 class="page-title">缩进与制表符</h2>
+    <h2 class="page-title">{{ t('views.tabsAndIndents.title') }}</h2>
 
-    <OptionGroup label="制表符" description="配置制表符和缩进的基本行为">
+    <OptionGroup :label="t('views.tabsAndIndents.groups.tabs.title')" :description="t('views.tabsAndIndents.groups.tabs.description')">
       <OptionControl
         label="UseTab"
-        description="使用制表符的方式"
+        :description="optionDescription('UseTab')"
         type="enum"
         :modelValue="store.config.UseTab"
         :enumValues="['Never', 'ForIndentation', 'ForContinuationAndIndentation', 'AlignWithSpaces', 'Always']"
@@ -21,7 +27,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="IndentWidth"
-        description="缩进宽度（空格数）"
+        :description="optionDescription('IndentWidth')"
         type="integer"
         :modelValue="store.config.IndentWidth"
         :min="1" :max="16"
@@ -29,7 +35,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="TabWidth"
-        description="制表符宽度"
+        :description="optionDescription('TabWidth')"
         type="integer"
         :modelValue="store.config.TabWidth"
         :min="1" :max="16"
@@ -37,7 +43,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="ContinuationIndentWidth"
-        description="续行缩进宽度"
+        :description="optionDescription('ContinuationIndentWidth')"
         type="integer"
         :modelValue="store.config.ContinuationIndentWidth"
         :min="0" :max="32"
@@ -45,7 +51,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="ConstructorInitializerIndentWidth"
-        description="构造函数初始化列表及继承列表的缩进宽度"
+        :description="optionDescription('ConstructorInitializerIndentWidth')"
         type="integer"
         :modelValue="store.config.ConstructorInitializerIndentWidth"
         :min="0" :max="32"
@@ -53,24 +59,24 @@ const store = useFormatStore()
       />
     </OptionGroup>
 
-    <OptionGroup label="语句缩进" description="各类语句的缩进行为">
+    <OptionGroup :label="t('views.tabsAndIndents.groups.statements.title')" :description="t('views.tabsAndIndents.groups.statements.description')">
       <OptionControl
         label="IndentCaseLabels"
-        description="case 标签缩进一级"
+        :description="optionDescription('IndentCaseLabels')"
         type="boolean"
         :modelValue="store.config.IndentCaseLabels"
         @update:modelValue="store.setOption('IndentCaseLabels', $event as boolean)"
       />
       <OptionControl
         label="IndentCaseBlocks"
-        description="case 块缩进一级"
+        :description="optionDescription('IndentCaseBlocks')"
         type="boolean"
         :modelValue="store.config.IndentCaseBlocks"
         @update:modelValue="store.setOption('IndentCaseBlocks', $event as boolean)"
       />
       <OptionControl
         label="IndentGotoLabels"
-        description="goto 标签缩进方式"
+        :description="optionDescription('IndentGotoLabels')"
         type="enum"
         :modelValue="store.config.IndentGotoLabels"
         :enumValues="['NoIndent', 'OuterIndent', 'InnerIndent', 'HalfIndent']"
@@ -78,24 +84,24 @@ const store = useFormatStore()
       />
       <OptionControl
         label="IndentExportBlock"
-        description="缩进 export {} 块体"
+        :description="optionDescription('IndentExportBlock')"
         type="boolean"
         :modelValue="store.config.IndentExportBlock"
         @update:modelValue="store.setOption('IndentExportBlock', $event as boolean)"
       />
     </OptionGroup>
 
-    <OptionGroup label="访问修饰符与命名空间">
+    <OptionGroup :label="t('views.tabsAndIndents.groups.access.title')">
       <OptionControl
         label="IndentAccessModifiers"
-        description="访问修饰符拥有独立缩进层级"
+        :description="optionDescription('IndentAccessModifiers')"
         type="boolean"
         :modelValue="store.config.IndentAccessModifiers"
         @update:modelValue="store.setOption('IndentAccessModifiers', $event as boolean)"
       />
       <OptionControl
         label="AccessModifierOffset"
-        description="访问修饰符的额外缩进偏移量"
+        :description="optionDescription('AccessModifierOffset')"
         type="integer"
         :modelValue="store.config.AccessModifierOffset"
         :min="-16" :max="16"
@@ -103,7 +109,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="NamespaceIndentation"
-        description="命名空间缩进方式"
+        :description="optionDescription('NamespaceIndentation')"
         type="enum"
         :modelValue="store.config.NamespaceIndentation"
         :enumValues="['None', 'Inner', 'All']"
@@ -111,7 +117,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="IndentExternBlock"
-        description="extern 块缩进方式"
+        :description="optionDescription('IndentExternBlock')"
         type="enum"
         :modelValue="store.config.IndentExternBlock"
         :enumValues="['AfterExternBlock', 'NoIndent', 'Indent']"
@@ -119,10 +125,10 @@ const store = useFormatStore()
       />
     </OptionGroup>
 
-    <OptionGroup label="预处理与其他">
+    <OptionGroup :label="t('views.tabsAndIndents.groups.preprocessor.title')">
       <OptionControl
         label="IndentPPDirectives"
-        description="预处理指令缩进方式"
+        :description="optionDescription('IndentPPDirectives')"
         type="enum"
         :modelValue="store.config.IndentPPDirectives"
         :enumValues="['None', 'AfterHash', 'BeforeHash', 'Leave']"
@@ -130,7 +136,7 @@ const store = useFormatStore()
       />
       <OptionControl
         label="PPIndentWidth"
-        description="预处理指令缩进宽度（-1 使用 IndentWidth）"
+        :description="optionDescription('PPIndentWidth')"
         type="integer"
         :modelValue="store.config.PPIndentWidth"
         :min="-1" :max="32"
@@ -138,21 +144,21 @@ const store = useFormatStore()
       />
       <OptionControl
         label="IndentWrappedFunctionNames"
-        description="换行的函数名缩进"
+        :description="optionDescription('IndentWrappedFunctionNames')"
         type="boolean"
         :modelValue="store.config.IndentWrappedFunctionNames"
         @update:modelValue="store.setOption('IndentWrappedFunctionNames', $event as boolean)"
       />
       <OptionControl
         label="IndentRequiresClause"
-        description="requires 子句缩进"
+        :description="optionDescription('IndentRequiresClause')"
         type="boolean"
         :modelValue="store.config.IndentRequiresClause"
         @update:modelValue="store.setOption('IndentRequiresClause', $event as boolean)"
       />
       <OptionControl
         label="LambdaBodyIndentation"
-        description="Lambda 体缩进方式"
+        :description="optionDescription('LambdaBodyIndentation')"
         type="enum"
         :modelValue="store.config.LambdaBodyIndentation"
         :enumValues="['Signature', 'OuterScope']"

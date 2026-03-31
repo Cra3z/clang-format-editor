@@ -4,10 +4,12 @@ import { useSettingsStore } from '@/stores/settingsStore'
 import { presetNames } from '@/data/presets'
 import type { BasedOnStyle } from '@/types/clangFormat'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import SettingsModal from './SettingsModal.vue'
 
 const store = useFormatStore()
 const settingsStore = useSettingsStore()
+const { t } = useI18n()
 const showExport = ref(false)
 const showSettings = ref(false)
 const isDark = computed(() => settingsStore.theme === 'dark')
@@ -61,12 +63,12 @@ function resetConfig() {
 <template>
   <header class="toolbar">
     <div class="toolbar-left">
-      <h1 class="app-title">Clang-Format Editor</h1>
+      <h1 class="app-title">{{ t('app.title') }}</h1>
     </div>
 
     <div class="toolbar-center">
       <label class="preset-label">
-        <span>基础风格:</span>
+        <span>{{ t('toolbar.baseStyle') }}</span>
         <select :value="store.activePreset" @change="handlePresetChange">
           <option v-for="name in presetNames" :key="name" :value="name">
             {{ name }}
@@ -76,26 +78,26 @@ function resetConfig() {
     </div>
 
     <div class="toolbar-right">
-      <button @click="toggleTheme" class="theme-btn" :title="isDark ? '切换到亮色主题' : '切换到暗色主题'">
+      <button @click="toggleTheme" class="theme-btn" :title="isDark ? t('toolbar.switchToLight') : t('toolbar.switchToDark')">
         {{ isDark ? '☀️' : '🌙' }}
       </button>
-      <button @click="showSettings = true" title="打开设置">⚙️ 设置</button>
-      <button @click="handleImport" title="导入 .clang-format 文件">📂 导入</button>
-      <button @click="exportConfig" title="导出配置" class="primary">💾 导出</button>
-      <button @click="resetConfig" title="重置为预设默认值">🔄 重置</button>
+      <button @click="showSettings = true" :title="t('toolbar.openSettings')">⚙️ {{ t('settings.title') }}</button>
+      <button @click="handleImport" :title="t('toolbar.importFile')">📂 {{ t('common.actions.import') }}</button>
+      <button @click="exportConfig" :title="t('toolbar.exportConfig')" class="primary">💾 {{ t('common.actions.export') }}</button>
+      <button @click="resetConfig" :title="t('toolbar.resetToPreset')">🔄 {{ t('common.actions.reset') }}</button>
     </div>
 
     <!-- Export overlay -->
     <div v-if="showExport" class="export-overlay" @click.self="showExport = false">
       <div class="export-modal">
         <div class="export-header">
-          <h3>导出 .clang-format</h3>
+          <h3>{{ t('toolbar.exportTitle') }}</h3>
           <button class="close-btn" @click="showExport = false">✕</button>
         </div>
         <pre class="export-content mono">{{ store.yamlOutput }}</pre>
         <div class="export-actions">
-          <button class="copy-button" @click="copyToClipboard">📋 复制到剪贴板</button>
-          <button class="primary" @click="downloadFile">💾 下载文件</button>
+          <button class="copy-button" @click="copyToClipboard">📋 {{ t('toolbar.copyToClipboard') }}</button>
+          <button class="primary" @click="downloadFile">💾 {{ t('common.actions.downloadFile') }}</button>
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
+import type { SupportedLocale } from '@/i18n/messages'
 
 export type AppTheme = 'dark' | 'light'
 export type AppLocale = 'system' | 'zh-CN' | 'en-US'
@@ -32,6 +33,27 @@ function readStoredLocale(): AppLocale {
 
 function applyTheme(theme: AppTheme) {
   document.documentElement.setAttribute('data-theme', theme)
+}
+
+function isSimplifiedChineseLocale(locale: string) {
+  const normalized = locale.toLowerCase()
+  return normalized.startsWith('zh-cn')
+    || normalized.startsWith('zh-sg')
+    || normalized.includes('hans')
+}
+
+function detectSystemLocale(): SupportedLocale {
+  const candidates = Array.isArray(navigator.languages) && navigator.languages.length > 0
+    ? navigator.languages
+    : [navigator.language]
+
+  return candidates.some(locale => typeof locale === 'string' && isSimplifiedChineseLocale(locale))
+    ? 'zh-CN'
+    : 'en-US'
+}
+
+function applyLocale(locale: SupportedLocale) {
+  document.documentElement.lang = locale
 }
 
 function getDetectionCandidates() {
@@ -67,6 +89,10 @@ export const useSettingsStore = defineStore('settings', () => {
   const clangFormatDetectionAttempted = ref(false)
 
   const isTauri = '__TAURI_INTERNALS__' in window
+
+  const resolvedLocale = computed<SupportedLocale>(() => {
+    return locale.value === 'system' ? detectSystemLocale() : locale.value
+  })
 
   const effectiveClangFormatExecutablePath = computed(() => {
     return clangFormatExecutablePath.value.trim() || detectedClangFormatExecutablePath.value.trim()
@@ -134,10 +160,15 @@ export const useSettingsStore = defineStore('settings', () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, value)
   }, { immediate: true })
 
+  watch(resolvedLocale, (value) => {
+    applyLocale(value)
+  }, { immediate: true })
+
   return {
     theme,
     clangFormatExecutablePath,
     locale,
+    resolvedLocale,
     detectedClangFormatExecutablePath,
     detectedClangFormatVersion,
     isDetectingClangFormat,
