@@ -85,7 +85,7 @@ function handleBooleanToggle() {
 
 <style scoped lang="scss">
 .option-control {
-  padding: 7px 0;
+  padding: 7px 6px;
   border-bottom: 1px solid var(--border-light);
   transition: background-color var(--transition-fast);
   border-radius: var(--radius-sm);
@@ -96,8 +96,6 @@ function handleBooleanToggle() {
 
   &:hover {
     background: var(--bg-hover);
-    margin: 0 -6px;
-    padding: 7px 6px;
   }
 }
 

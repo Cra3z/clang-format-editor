@@ -7,12 +7,36 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SettingsModal from './SettingsModal.vue'
 
+// SVG icons — light/dark variants
+import settingsIconLight from '@/assets/icons/settings.svg?url'
+import settingsIconDark from '@/assets/icons/settings_dark.svg?url'
+import importIconLight from '@/assets/icons/import.svg?url'
+import importIconDark from '@/assets/icons/import_dark.svg?url'
+import exportIconLight from '@/assets/icons/export.svg?url'
+import exportIconDark from '@/assets/icons/export_dark.svg?url'
+import resetIconLight from '@/assets/icons/reset.svg?url'
+import resetIconDark from '@/assets/icons/reset_dark.svg?url'
+import themeIconLight from '@/assets/icons/theme.svg?url'
+import themeIconDark from '@/assets/icons/theme_dark.svg?url'
+import githubIconLight from '@/assets/icons/github.svg?url'
+import githubIconDark from '@/assets/icons/github_dark.svg?url'
+
 const store = useFormatStore()
 const settingsStore = useSettingsStore()
 const { t } = useI18n()
 const showExport = ref(false)
 const showSettings = ref(false)
 const isDark = computed(() => settingsStore.theme === 'dark')
+
+// Theme-aware icon sources
+const icons = computed(() => ({
+  settings: isDark.value ? settingsIconDark : settingsIconLight,
+  import: isDark.value ? importIconDark : importIconLight,
+  export: isDark.value ? exportIconDark : exportIconLight,
+  reset: isDark.value ? resetIconDark : resetIconLight,
+  theme: isDark.value ? themeIconDark : themeIconLight,
+  github: isDark.value ? githubIconDark : githubIconLight,
+}))
 const importErrorMsg = ref('')
 let importErrorTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -77,6 +101,15 @@ function handleImport() {
 function resetConfig() {
   store.resetToPreset()
 }
+
+async function openGitHub() {
+  try {
+    const { open } = await import('@tauri-apps/plugin-shell')
+    await open('https://github.com/Cra3z/clang-format-editor')
+  } catch {
+    window.open('https://github.com/Cra3z/clang-format-editor', '_blank')
+  }
+}
 </script>
 
 <template>
@@ -97,13 +130,16 @@ function resetConfig() {
     </div>
 
     <div class="toolbar-right">
-      <button @click="toggleTheme" class="theme-btn" :title="isDark ? t('toolbar.switchToLight') : t('toolbar.switchToDark')">
-        {{ isDark ? '☀️' : '🌙' }}
+      <button @click="openGitHub" class="theme-btn icon-only" title="GitHub">
+        <img :src="icons.github" class="btn-icon" alt="GitHub" />
       </button>
-      <button @click="showSettings = true" :title="t('toolbar.openSettings')">⚙️ {{ t('settings.title') }}</button>
-      <button @click="handleImport" :title="t('toolbar.importFile')">📂 {{ t('common.actions.import') }}</button>
-      <button @click="exportConfig" :title="t('toolbar.exportConfig')" class="primary">💾 {{ t('common.actions.export') }}</button>
-      <button @click="resetConfig" :title="t('toolbar.resetToPreset')">🔄 {{ t('common.actions.reset') }}</button>
+      <button @click="toggleTheme" class="theme-btn icon-only" :title="isDark ? t('toolbar.switchToLight') : t('toolbar.switchToDark')">
+        <img :src="icons.theme" class="btn-icon" alt="theme" />
+      </button>
+      <button @click="showSettings = true" :title="t('toolbar.openSettings')"><img :src="icons.settings" class="btn-icon" alt="settings" /> {{ t('settings.title') }}</button>
+      <button @click="handleImport" :title="t('toolbar.importFile')"><img :src="icons.import" class="btn-icon" alt="import" /> {{ t('common.actions.import') }}</button>
+      <button @click="exportConfig" :title="t('toolbar.exportConfig')" class="primary"><img :src="icons.export" class="btn-icon" alt="export" /> {{ t('common.actions.export') }}</button>
+      <button @click="resetConfig" :title="t('toolbar.resetToPreset')"><img :src="icons.reset" class="btn-icon" alt="reset" /> {{ t('common.actions.reset') }}</button>
     </div>
 
     <Transition name="toast">
@@ -121,8 +157,8 @@ function resetConfig() {
         </div>
         <pre class="export-content mono">{{ store.yamlOutput }}</pre>
         <div class="export-actions">
-          <button class="copy-button" @click="copyToClipboard">📋 {{ t('toolbar.copyToClipboard') }}</button>
-          <button class="primary" @click="downloadFile">💾 {{ t('common.actions.downloadFile') }}</button>
+          <button class="copy-button" @click="copyToClipboard">{{ t('toolbar.copyToClipboard') }}</button>
+          <button class="primary" @click="downloadFile"><img :src="icons.export" class="btn-icon" alt="download" /> {{ t('common.actions.downloadFile') }}</button>
         </div>
       </div>
     </div>
@@ -181,13 +217,27 @@ function resetConfig() {
 
 .theme-btn {
   padding: 6px 8px;
-  font-size: 16px;
   background: transparent;
   border-radius: var(--radius-md);
 
   &:hover {
     background: var(--bg-hover);
   }
+}
+
+.icon-only {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
 }
 
 .import-toast {

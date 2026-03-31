@@ -293,7 +293,10 @@ function buildThemeExtension() {
       backgroundColor: 'color-mix(in srgb, var(--error) 12%, transparent)',
     },
     '.cm-lintRange-error': {
-      backgroundImage: 'linear-gradient(to bottom, transparent 65%, var(--error) 65%, var(--error) 75%, transparent 75%)',
+      backgroundImage: 'none',
+      textDecoration: 'wavy underline var(--error)',
+      textDecorationSkipInk: 'none',
+      textUnderlineOffset: '2px',
     },
     '.cm-tooltip-lint': {
       backgroundColor: 'var(--bg-surface)',

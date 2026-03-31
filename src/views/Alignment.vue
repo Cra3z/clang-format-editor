@@ -3,12 +3,40 @@ import { useFormatStore } from '@/stores/formatStore'
 import OptionGroup from '@/components/OptionGroup.vue'
 import OptionControl from '@/components/OptionControl.vue'
 import { useI18n } from 'vue-i18n'
+import type { TrailingCommentsAlignmentKind } from '@/types/clangFormat'
 
 const store = useFormatStore()
 const { t } = useI18n()
 
 function optionDescription(key: string) {
   return t(`views.alignment.options.${key}`)
+}
+
+function getTrailingCommentsKind(): TrailingCommentsAlignmentKind {
+  const val = store.config.AlignTrailingComments
+  if (typeof val === 'boolean') return val ? 'Always' : 'Never'
+  if (val && typeof val === 'object') return (val as any).Kind ?? 'Always'
+  return 'Always'
+}
+
+function getTrailingCommentsOverEmptyLines(): number {
+  const val = store.config.AlignTrailingComments
+  if (val && typeof val === 'object') return (val as any).OverEmptyLines ?? 0
+  return 0
+}
+
+function setTrailingCommentsKind(kind: unknown) {
+  store.setOption('AlignTrailingComments', {
+    Kind: kind as TrailingCommentsAlignmentKind,
+    OverEmptyLines: getTrailingCommentsOverEmptyLines(),
+  })
+}
+
+function setTrailingCommentsOverEmptyLines(value: unknown) {
+  store.setOption('AlignTrailingComments', {
+    Kind: getTrailingCommentsKind(),
+    OverEmptyLines: value as number,
+  })
 }
 </script>
 
@@ -88,11 +116,20 @@ function optionDescription(key: string) {
         @update:modelValue="store.setOption('AlignOperands', $event as any)"
       />
       <OptionControl
-        label="AlignTrailingComments"
-        :description="optionDescription('AlignTrailingComments')"
-        type="boolean"
-        :modelValue="store.config.AlignTrailingComments"
-        @update:modelValue="store.setOption('AlignTrailingComments', $event as boolean)"
+        label="AlignTrailingComments.Kind"
+        :description="optionDescription('AlignTrailingComments_Kind')"
+        type="enum"
+        :modelValue="getTrailingCommentsKind()"
+        :enumValues="['Leave', 'Always', 'Never']"
+        @update:modelValue="setTrailingCommentsKind($event)"
+      />
+      <OptionControl
+        label="AlignTrailingComments.OverEmptyLines"
+        :description="optionDescription('AlignTrailingComments_OverEmptyLines')"
+        type="integer"
+        :modelValue="getTrailingCommentsOverEmptyLines()"
+        :min="0" :max="10"
+        @update:modelValue="setTrailingCommentsOverEmptyLines($event)"
       />
     </OptionGroup>
   </div>

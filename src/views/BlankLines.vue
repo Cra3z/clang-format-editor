@@ -10,6 +10,15 @@ const { t } = useI18n()
 function optionDescription(key: string) {
   return t(`views.blankLines.options.${key}`)
 }
+
+function getKeepEmptyLines(key: string): boolean {
+  return !!(store.config.KeepEmptyLines as any)?.[key]
+}
+
+function setKeepEmptyLines(key: string, value: unknown) {
+  const current = store.config.KeepEmptyLines ?? {}
+  store.setOption('KeepEmptyLines', { ...current, [key]: value })
+}
 </script>
 
 <template>
@@ -24,6 +33,30 @@ function optionDescription(key: string) {
         :modelValue="store.config.MaxEmptyLinesToKeep"
         :min="0" :max="10"
         @update:modelValue="store.setOption('MaxEmptyLinesToKeep', $event as number)"
+      />
+    </OptionGroup>
+
+    <OptionGroup :label="t('views.blankLines.groups.keepEmptyLines')">
+      <OptionControl
+        label="AtEndOfFile"
+        :description="optionDescription('KeepEmptyLines_AtEndOfFile')"
+        type="boolean"
+        :modelValue="getKeepEmptyLines('AtEndOfFile')"
+        @update:modelValue="setKeepEmptyLines('AtEndOfFile', $event)"
+      />
+      <OptionControl
+        label="AtStartOfBlock"
+        :description="optionDescription('KeepEmptyLines_AtStartOfBlock')"
+        type="boolean"
+        :modelValue="getKeepEmptyLines('AtStartOfBlock')"
+        @update:modelValue="setKeepEmptyLines('AtStartOfBlock', $event)"
+      />
+      <OptionControl
+        label="AtStartOfFile"
+        :description="optionDescription('KeepEmptyLines_AtStartOfFile')"
+        type="boolean"
+        :modelValue="getKeepEmptyLines('AtStartOfFile')"
+        @update:modelValue="setKeepEmptyLines('AtStartOfFile', $event)"
       />
     </OptionGroup>
 
